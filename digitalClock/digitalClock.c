@@ -9,8 +9,6 @@ static char TimeStr[13];
 static guint TimeOutVal = 200;
 
 
-//static void digital_clock_realize(GtkWidget*);
-//static void digital_clock_unrealize(GtkWidget*);
 static void digital_clock_get_preferred_width(GtkWidget * w, gint * min,
 					      gint * nat);
 static void digital_clock_get_preferred_height_for_width(GtkWidget * w,
@@ -48,7 +46,7 @@ static gboolean flushtime_cb(DigitalClock * dclock)
 
     if (priv->show_msec) {
 
-	priv->width = priv->fsiz * 8;
+	priv->width = priv->fsiz * 7;
     } else if (priv->show_sec) {
 	priv->width = priv->fsiz * 5;
 
@@ -116,7 +114,6 @@ static gboolean digital_clock_draw(GtkWidget * w, cairo_t * cr)
 		sprintf(TimeStr, "%02d %02d %02d", now_tm->tm_hour,
 			now_tm->tm_min, now_tm->tm_sec);
 
-//    timestr=g_strdup_printf("%02d:%02d:%02d",now_tm->tm_hour,now_tm->tm_min,now_tm->tm_sec);
 	    if (dclock->priv->show_msec) {
 		sprintf(TimeStr + 8, ".%d",
 			(int) (tv.tv_usec / 1000.0 + 0.5));
@@ -129,7 +126,6 @@ static gboolean digital_clock_draw(GtkWidget * w, cairo_t * cr)
 		sprintf(TimeStr, "%02d %02d", now_tm->tm_hour,
 			now_tm->tm_min);
 	}
-//    timestr=g_strdup_printf("%02d:%02d",now_tm->tm_hour,now_tm->tm_min);
 	now_sec = now_tm->tm_sec;
     }
 
@@ -139,7 +135,6 @@ static gboolean digital_clock_draw(GtkWidget * w, cairo_t * cr)
     cairo_select_font_face(cr, dclock->priv->font, CAIRO_FONT_SLANT_NORMAL,
 			   CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_font_size(cr, fontsiz);
-//    cairo_set_line_width(cr,1./300);
 
     cairo_text_extents_t extents;
     if (dclock->priv->show_sec) {
@@ -157,8 +152,6 @@ static gboolean digital_clock_draw(GtkWidget * w, cairo_t * cr)
 
     cairo_move_to(cr, x, y);
     cairo_show_text(cr, TimeStr);
-//    cairo_stroke(cr);
-//    g_free(timestr);
 
     return TRUE;
 }
