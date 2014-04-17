@@ -15,6 +15,16 @@
 #define ANALOG_CLOCK_GET_PRIV(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj),TYPE_ANALOG_CLOCK,AnalogClockPriv))
 
 
+typedef struct clockVal
+{
+//  int h;
+//  int m;
+//  int s;
+  int ts;
+  gboolean inited;
+} ClockVal;
+
+
 
 
 typedef struct analogClockPriv
@@ -27,6 +37,7 @@ typedef struct analogClockPriv
   gboolean show_sec;
   gboolean show_num;
   gboolean sensitive;
+  ClockVal clock_val;
 
 } AnalogClockPriv;
 

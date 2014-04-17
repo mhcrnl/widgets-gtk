@@ -12,20 +12,11 @@ static int SecOfMin = (int) 60;
 static int SecOfHour = (int) 3600;
 static int SecOfDaytime = (int) 3600 * 12;
 
-static struct clockVal
+inline gboolean
+clockval_is_inited (ClockVal *val)
 {
-  int h;
-  int m;
-  int s;
-  int ts;
-} ClockVal;
-
-static gboolean
-clockval_is_null (struct clockVal *val)
-{
-
-  return (val->h == 0 && val->m == 0 && val->s == 0);
-
+    return val->inited;
+//  return (val->h == 0 && val->m == 0 && val->s == 0);
 }
 
 //static void analog_clock_realize(GtkWidget*);
@@ -76,7 +67,10 @@ _draw (GtkWidget * w, cairo_t * cr)
 {
     
     AnalogClock * aclock=ANALOG_CLOCK(w);
-  struct timeval tv;
+    AnalogClockPriv*priv=aclock->priv;
+        
+  
+    struct timeval tv;
   if (gettimeofday (&tv, NULL) == -1)
     {
       g_critical ("gettimeofday() failed!");
@@ -87,9 +81,8 @@ _draw (GtkWidget * w, cairo_t * cr)
 
 
   double width, height, fontsiz;
-  width = (double) aclock->priv->width;
-  height = (double) aclock->priv->height;
-  AnalogClockPriv*priv=aclock->priv;
+  width = (double) priv->width;
+  height = (double)priv->height;
 
 //  double edge=width<=height?width:height;
 
@@ -111,17 +104,18 @@ _draw (GtkWidget * w, cairo_t * cr)
   cairo_paint (cr);
 
 
-  if (aclock->priv->sensitive || clockval_is_null (&ClockVal))
+  if (priv->sensitive || !clockval_is_inited (&priv->clock_val))
     {
-      ClockVal.h = now_tm->tm_hour;
-      ClockVal.m = now_tm->tm_min;
-      ClockVal.s = now_tm->tm_sec;
-      ClockVal.ts = ClockVal.h * 3600 + ClockVal.m * 60 + ClockVal.s;
+      int hh = now_tm->tm_hour;
+      int mm = now_tm->tm_min;
+      int ss = now_tm->tm_sec;
+      priv->clock_val.ts = hh * 3600 + mm * 60 + ss;
+      priv->clock_val.inited=TRUE;
     }
 
-  printf ("Time:%d:[%d:%d:%d].%03u %06u\n", ClockVal.ts, ClockVal.h,
-	  ClockVal.m, ClockVal.s, (int) (tv.tv_usec / 1000.0 + 0.5),
-	  tv.tv_usec);
+//  printf ("Time:%d:[%d:%d:%d].%03u %06u\n", ClockVal.ts, ClockVal.h,
+//	  ClockVal.m, ClockVal.s, (int) (tv.tv_usec / 1000.0 + 0.5),
+//	  tv.tv_usec);
 
   double x = 0;			// width / 2 - extents.width / 2 - extents.x_bearing;
   double y = 0;			// height / 2 - extents.height / 2 - extents.y_bearing;
@@ -189,11 +183,11 @@ _draw (GtkWidget * w, cairo_t * cr)
 /*draw pointers...below*/
   double ptx, pty;
   gboolean isDaytime;
-  if (ClockVal.ts / SecOfDaytime != 0)
+  if (priv->clock_val.ts / SecOfDaytime != 0)
     isDaytime = FALSE;
   else
     isDaytime = TRUE;
-  int ts = ClockVal.ts % SecOfDaytime;
+  int ts = priv->clock_val.ts % SecOfDaytime;
 
   double hpointer = ((double) ts / SecOfDaytime) * 2 * M_PI - M_PI / 2;
 //  printf("min:%g\n",spointer);
@@ -230,7 +224,7 @@ _draw (GtkWidget * w, cairo_t * cr)
   double spointer = (double) (ts % SecOfMin) / 60 * 2 * M_PI - M_PI / 2;
   ptx = cos (spointer) * radius;	// + 0.5;
   pty = sin (spointer) * radius;	// + 0.5;
-  if(aclock->priv->show_sec){
+  if(priv->show_sec){
   cairo_move_to (cr, x, y);
   cairo_line_to (cr, ptx, pty);
   cairo_set_dash (cr, pointerDash, 2, 0.06);
