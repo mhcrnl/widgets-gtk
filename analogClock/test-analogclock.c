@@ -2,43 +2,7 @@
 #include"analogClock.h"
 
 
-static int val;
 
-
-
-
-gboolean
-tmout_cb (AnalogClock * dclock)
-{
-
-//    g_object_set(dclock,"num",val++,NULL);
-/*
-    if(val<105)
-        return TRUE;
-    else
-        return FALSE;
-
-*/
-val++;
-  static gboolean set;
-
-  if (set)
-    set = FALSE;
-  else
-    set = TRUE;
-
-//    digital_clock_set_font_size(dclock,val++);
-//    analog_clock_set_sensitive(dclock,set);
-
-  if(val%3==0)
-//  analog_clock_show_sec (dclock, set);
-    g_object_set(dclock,"show_num",TRUE,NULL);
-  else
-    g_object_set(dclock,"show_num",FALSE,NULL);
-
-
-  return TRUE;
-}
 
 int
 main (int argc, char **argv)
@@ -51,15 +15,36 @@ main (int argc, char **argv)
   //gtk_widget_set_size_request (win, 300, 300);
 
 
-  AnalogClock *clock =
-    g_object_new (TYPE_ANALOG_CLOCK,  "sensitive", TRUE,"show_sec",TRUE,
-		  NULL);
-  val = 30;
+  GtkWidget *clock0 =
+    g_object_new (TYPE_ANALOG_CLOCK,  "sensitive", TRUE,"show_sec",TRUE, NULL);
 
-  gtk_container_add (GTK_CONTAINER (win), GTK_WIDGET (clock));
+  GtkWidget * clock1 =
+      g_object_new (TYPE_ANALOG_CLOCK,"show_sec",FALSE, "sensitive", TRUE,"show_num",TRUE,NULL);
 
-  g_timeout_add (3000, (GSourceFunc) tmout_cb, clock);
-//    g_idle_add((GSourceFunc)tmout_cb,clock);
+  GtkWidget * clock2 =
+      g_object_new (TYPE_ANALOG_CLOCK,"show_sec",TRUE, "sensitive", FALSE, "show_num",TRUE,NULL);
+
+  GtkWidget * clock3 =
+      g_object_new (TYPE_ANALOG_CLOCK,"show_sec",TRUE, "sensitive", TRUE,"show_num",TRUE, NULL);
+
+  gtk_widget_set_hexpand(clock0,TRUE);
+  gtk_widget_set_vexpand(clock0,TRUE);
+  gtk_widget_set_hexpand(clock1,TRUE);
+  gtk_widget_set_vexpand(clock1,TRUE);
+  gtk_widget_set_hexpand(clock2,TRUE);
+  gtk_widget_set_vexpand(clock2,TRUE);
+  gtk_widget_set_hexpand(clock3,TRUE);
+  gtk_widget_set_vexpand(clock3,TRUE);
+
+  GtkWidget*grid=gtk_grid_new();
+
+  gtk_grid_attach(GTK_GRID(grid),clock0,0,0,1,1);
+  gtk_grid_attach(GTK_GRID(grid),clock1,0,1,1,1);
+  gtk_grid_attach(GTK_GRID(grid),clock2,1,0,1,1);
+  gtk_grid_attach(GTK_GRID(grid),clock3,1,1,1,1);
+
+  gtk_container_add (GTK_CONTAINER (win), grid);
+
 
   gtk_widget_show_all (win);
   gtk_main ();
