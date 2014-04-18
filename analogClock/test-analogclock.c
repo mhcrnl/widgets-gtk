@@ -45,6 +45,7 @@ main (int argc, char **argv)
 
   gtk_container_add (GTK_CONTAINER (win), grid);
 
+  g_signal_connect(G_OBJECT(win),"destroy",G_CALLBACK(gtk_main_quit),NULL);
 
   gtk_widget_show_all (win);
   gtk_main ();
