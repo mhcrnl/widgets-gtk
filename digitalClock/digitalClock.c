@@ -5,7 +5,7 @@
 G_DEFINE_TYPE(DigitalClock, digital_clock, GTK_TYPE_DRAWING_AREA)
 
 
-static char TimeStr[13];
+//static char TimeStr[13];
 static guint TimeOutVal = 200;
 
 
@@ -37,6 +37,11 @@ static void digital_clock_set_property(GObject * obj, guint prop_id,
 				       const GValue * value,
 				       GParamSpec * pspec);
 
+
+static inline gboolean time_val_is_null(const char* timeval)
+{
+    return strlen(timeval)==0;
+}
 
 
 static gboolean flushtime_cb(DigitalClock * dclock)
@@ -71,6 +76,7 @@ static gboolean flushtime_cb(DigitalClock * dclock)
 static gboolean digital_clock_draw(GtkWidget * w, cairo_t * cr)
 {
     DigitalClock *dclock = DIGITAL_CLOCK(w);
+    DigitalClockPriv*priv=dclock->priv;
 
     struct timeval tv;
     if (gettimeofday(&tv, NULL) == -1) {
@@ -83,9 +89,9 @@ static gboolean digital_clock_draw(GtkWidget * w, cairo_t * cr)
 
 
     double width, height, fontsiz;
-    width = (double) dclock->priv->width;
-    height = (double) dclock->priv->height;
-    fontsiz = (double) dclock->priv->fsiz;
+    width = (double) priv->width;
+    height = (double)priv->height;
+    fontsiz = (double) priv->fsiz;
 
     static gboolean draw_colon;
     static int now_sec = -1;
@@ -97,49 +103,48 @@ static gboolean digital_clock_draw(GtkWidget * w, cairo_t * cr)
 //  cairo_paint (cr);
 
     gtk_render_background(gtk_widget_get_style_context(w), cr, 0, 0,
-			  dclock->priv->width, dclock->priv->height);
+			  priv->width, priv->height);
 
-    if (dclock->priv->sensitive || 0 == strlen(TimeStr)) {
+    if (priv->sensitive || time_val_is_null(priv->time_val)) {
 
-        if(!dclock->priv->blink||last_msec<=500||now_sec!=now_tm->tm_sec)
+        if(!priv->blink||last_msec<=500)//||now_sec!=now_tm->tm_sec)
             draw_colon=TRUE;
         else
             draw_colon=FALSE;
 
-	if (dclock->priv->show_sec) {
+	if (priv->show_sec) {
 	    if (draw_colon)
-		sprintf(TimeStr, "%02d:%02d:%02d", now_tm->tm_hour,
+		sprintf(priv->time_val, "%02d:%02d:%02d", now_tm->tm_hour,
 			now_tm->tm_min, now_tm->tm_sec);
 	    else
-		sprintf(TimeStr, "%02d %02d %02d", now_tm->tm_hour,
+		sprintf(priv->time_val, "%02d %02d %02d", now_tm->tm_hour,
 			now_tm->tm_min, now_tm->tm_sec);
 
-	    if (dclock->priv->show_msec) {
-		sprintf(TimeStr + 8, ".%d",
+	    if (priv->show_msec) {
+		sprintf(priv->time_val+ 8, ".%d",
 			(int) (tv.tv_usec / 1000.0 + 0.5));
 	    }
 	} else {
 	    if (draw_colon)
-		sprintf(TimeStr, "%02d:%02d", now_tm->tm_hour,
+		sprintf(priv->time_val, "%02d:%02d", now_tm->tm_hour,
 			now_tm->tm_min);
 	    else
-		sprintf(TimeStr, "%02d %02d", now_tm->tm_hour,
+		sprintf(priv->time_val, "%02d %02d", now_tm->tm_hour,
 			now_tm->tm_min);
 	}
-	now_sec = now_tm->tm_sec;
+//	now_sec = now_tm->tm_sec;
     }
 
 	last_msec=(int) (tv.tv_usec / 1000.0 + 0.5);
-    printf("Time::[%s].%03u %06u\n", TimeStr,last_msec,tv.tv_usec);
+//    printf("Time::[%s].%03u %06u\n", TimeStr,last_msec,tv.tv_usec);
 
-    cairo_select_font_face(cr, dclock->priv->font, CAIRO_FONT_SLANT_NORMAL,
-			   CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_select_font_face(cr, priv->font, CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_font_size(cr, fontsiz);
 
     cairo_text_extents_t extents;
-    if (dclock->priv->show_sec) {
+    if (priv->show_sec) {
 	cairo_text_extents(cr, "00:00:00", &extents);
-	if (dclock->priv->show_msec)
+	if (priv->show_msec)
 	    cairo_text_extents(cr, "00:00:00.000", &extents);
     } else
 	cairo_text_extents(cr, "00:00", &extents);
@@ -151,7 +156,7 @@ static gboolean digital_clock_draw(GtkWidget * w, cairo_t * cr)
     cairo_set_source_rgb(cr, 0, 0, 0);
 
     cairo_move_to(cr, x, y);
-    cairo_show_text(cr, TimeStr);
+    cairo_show_text(cr, priv->time_val);
 
     return TRUE;
 }
@@ -174,6 +179,7 @@ static void digital_clock_init(DigitalClock * dclock)
     priv->fsiz = 0;
     priv->mode12 = TRUE;
 
+    priv->time_val=g_slice_alloc0(LENTIMESTR);
 
 //  g_signal_connect (G_OBJECT (dclock), "draw", G_CALLBACK (_draw), dclock);
     dclock->priv->timeoutid =
@@ -182,6 +188,9 @@ static void digital_clock_init(DigitalClock * dclock)
     GtkStyleContext *stylecontext = gtk_widget_get_style_context(w);
     gtk_style_context_add_class(stylecontext, GTK_STYLE_CLASS_BUTTON);
     gtk_style_context_add_class(stylecontext, "suggested-action");
+
+    gtk_widget_set_hexpand(w,TRUE);
+    gtk_widget_set_vexpand(w,TRUE);
 
 }
 
@@ -245,7 +254,7 @@ digital_clock_get_preferred_height(GtkWidget * w, gint * min, gint * nat)
 
 
 
-
+/*
 
 
 static void
@@ -275,7 +284,7 @@ digital_clock_get_preferred_width_for_height(GtkWidget * w, gint height,
 
 }
 
-
+*/
 
 
 
@@ -302,7 +311,7 @@ digital_clock_size_allocate(GtkWidget * w, GtkAllocation * allocation)
      */
     GTK_WIDGET_CLASS(digital_clock_parent_class)->size_allocate(w,
 								allocation);
-
+/*
     GdkWindow *window = gtk_widget_get_window(w);
     if (gtk_widget_get_realized(w)) {
 
@@ -324,7 +333,7 @@ digital_clock_size_allocate(GtkWidget * w, GtkAllocation * allocation)
 
     }
 
-
+*/
 
 }
 
@@ -427,6 +436,16 @@ digital_clock_set_property(GObject * obj, guint prop_id,
 
 
 
+static void digital_clock_dispose(GObject*gobject)
+{
+DigitalClockPriv*priv=DIGITAL_CLOCK(gobject)->priv;
+
+if(priv->time_val){
+g_slice_free1(LENTIMESTR,priv->time_val);
+priv->time_val=NULL;
+}
+G_OBJECT_CLASS(digital_clock_parent_class)->dispose(gobject);
+}
 
 static void digital_clock_class_init(DigitalClockClass * klass)
 {
@@ -434,10 +453,9 @@ static void digital_clock_class_init(DigitalClockClass * klass)
     GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
 
     widget_class->get_preferred_width = digital_clock_get_preferred_width;
-    widget_class->get_preferred_height =
-	digital_clock_get_preferred_height;
-    widget_class->get_preferred_height_for_width =
-	digital_clock_get_preferred_height_for_width;
+    widget_class->get_preferred_height = digital_clock_get_preferred_height;
+//    widget_class->get_preferred_height_for_width =
+//	digital_clock_get_preferred_height_for_width;
 
     widget_class->size_allocate = digital_clock_size_allocate;
     widget_class->draw = digital_clock_draw;
@@ -445,6 +463,7 @@ static void digital_clock_class_init(DigitalClockClass * klass)
     GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
     gobject_class->set_property = digital_clock_set_property;
     gobject_class->get_property = digital_clock_get_property;
+    gobject_class->dispose=digital_clock_dispose;
 
 
     g_object_class_install_property(gobject_class, PROP_FONT,

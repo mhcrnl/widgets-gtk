@@ -2,6 +2,7 @@
 #define _H_DIGITAL_CLOCK_
 
 #include<gtk/gtk.h>
+#include<string.h>
 
 
 #define TYPE_DIGITAL_CLOCK (digital_clock_get_type())
@@ -14,6 +15,9 @@
 
 #define DIGITAL_CLOCK_GET_PRIV(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj),TYPE_DIGITAL_CLOCK,DigitalClockPriv))
 
+#define LENTIMESTR 13
+
+
 
 
 
@@ -24,6 +28,7 @@ typedef struct digitalClockPriv {
     int fsiz;
     guint timeoutid;
     const gchar *font;
+    gchar*time_val;
     gboolean mode12;
     gboolean show_sec;
     gboolean show_msec;
