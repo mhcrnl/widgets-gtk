@@ -436,15 +436,15 @@ digital_clock_set_property(GObject * obj, guint prop_id,
 
 
 
-static void digital_clock_dispose(GObject*gobject)
+static void digital_clock_finalize(GObject*gobject)
 {
 DigitalClockPriv*priv=DIGITAL_CLOCK(gobject)->priv;
 
-if(priv->time_val){
+//if(priv->time_val){
 g_slice_free1(LENTIMESTR,priv->time_val);
-priv->time_val=NULL;
-}
-G_OBJECT_CLASS(digital_clock_parent_class)->dispose(gobject);
+//priv->time_val=NULL;
+//}
+G_OBJECT_CLASS(digital_clock_parent_class)->finalize(gobject);
 }
 
 static void digital_clock_class_init(DigitalClockClass * klass)
@@ -463,7 +463,7 @@ static void digital_clock_class_init(DigitalClockClass * klass)
     GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
     gobject_class->set_property = digital_clock_set_property;
     gobject_class->get_property = digital_clock_get_property;
-    gobject_class->dispose=digital_clock_dispose;
+    gobject_class->finalize=digital_clock_finalize;
 
 
     g_object_class_install_property(gobject_class, PROP_FONT,
