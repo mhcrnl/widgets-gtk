@@ -27,9 +27,10 @@ enum{
 //    CHILD_PROP_HANDLE_BOTTOM_LEFT,
 //    CHILD_PROP_HANDLE_TOP_RIGHT,
 
-    CHILD_PROP_ACTIVED,
+    CHILD_PROP_ACTIVE,
+    CHILD_PROP_SHRINK,
+    CHILD_PROP_OVERLAP,
 
-    CHILD_PROP_CANBE_OVERLAPPED,
     N_CHILD_PROPS
 
 };
@@ -40,9 +41,9 @@ enum{
 enum{
 PROP_0,
 PROP_FROZEN,
-PROP_MAYBE_OVERLAPPED,
+PROP_MAY_OVERLAP,
+PROP_MAY_SHRINK,
 N_PROPS
-
 
 };
 
@@ -51,7 +52,8 @@ HWND_MOVE,//TOP_LEFT,
 HWND_RIGHT,
 HWND_BOTTOM,
 HWND_RESIZE,//BOTTOM_RIGHT,
-
+HWND_TOP,
+HWND_LEFT,
 N_HWNDS
 
 };
@@ -84,13 +86,10 @@ struct floatBorderChild{
     GdkRectangle position[2];
     int drag_position[2];
 
-    guint actived:1;
-
-    guint canbe_overlapped:1;
-    guint canbe_shrink:1;
-
-    guint overlaped:1;
+    guint active:1;
+    guint overlap:1;
     guint shrink:1;
+
     guint in_drag:1;
 
 
@@ -102,8 +101,8 @@ struct floatBorderChild{
 struct floatBorderPriv{
 
 GList *children;
-guint maybe_overlapped:1;
-guint maybe_shrink:1;
+guint may_overlap:1;
+guint may_shrink:1;
 
 gboolean hwnd_mask[N_HWNDS];
 
@@ -219,8 +218,8 @@ static void float_border_class_init(FloatBorderClass *klass)
     cclass->remove=_float_border_remove;
     cclass->forall=_float_border_forall;
     cclass->child_type=float_border_child_type;
-    cclass->set_child_property=float_border_set_child_property;
-    cclass->get_child_property=float_border_get_child_property;
+//    cclass->set_child_property=float_border_set_child_property;
+//    cclass->get_child_property=float_border_get_child_property;
 
     gtk_container_class_handle_border_width(cclass);
 
@@ -231,11 +230,16 @@ static void float_border_class_init(FloatBorderClass *klass)
             g_param_spec_boolean("frozen","Frozen","Frozen all widgets within FloatBorder,enfore them can not resize",
                 FALSE,G_PARAM_READWRITE));
 
-    g_object_class_install_property(oclass,PROP_MAYBE_OVERLAPPED,
-            g_param_spec_boolean("maybe-overlapped","Maybe Overlapped","ensure whether any widget can be overlapped by another widget within FloatBorder",
+    g_object_class_install_property(oclass,PROP_MAY_OVERLAP,
+            g_param_spec_boolean("may-overlap","May Overlap","ensure whether a widget can be overlapped by another widget within FloatBorder",
+                FALSE,G_PARAM_READWRITE));
+
+    g_object_class_install_property(oclass,PROP_MAY_SHRINK,
+            g_param_spec_boolean("may-shrink","May Shrink","ensure whether a widget can be shrinked within FloatBorder",
                 FALSE,G_PARAM_READWRITE));
 
 
+/*
 
 gtk_container_class_install_child_property (cclass,
                                   CHILD_PROP_X,
@@ -261,17 +265,24 @@ gtk_container_class_install_child_property (cclass,
 
 
 gtk_container_class_install_child_property (cclass,
-                                  CHILD_PROP_ACTIVED,
-                                  g_param_spec_boolean ("actived","Actived","Whether a widget has any resize handle.",
+                                  CHILD_PROP_ACTIVE,
+                                  g_param_spec_boolean ("active","Active","Whether a widget has any resize handle.",
                                   FALSE,
                                   G_PARAM_READWRITE));
 
 
 gtk_container_class_install_child_property (cclass,
-                                  CHILD_PROP_CANBE_OVERLAPPED,
-                                  g_param_spec_boolean ("canbe-overlapped","Canbe Overlapped","Whether current widget can be overlapped by another.",
+                                  CHILD_PROP_OVERLAP,
+                                  g_param_spec_boolean ("overlap","Canbe Overlapped","Whether current widget can be overlapped by another.",
+                                  TRUE,
+                                  G_PARAM_READWRITE));
+
+gtk_container_class_install_child_property (cclass,
+                                  CHILD_PROP_SHRINK,
+                                  g_param_spec_boolean ("shrink","Canbe shrinked","Whether current widget can be shrinked by another.",
                                   FALSE,
                                   G_PARAM_READWRITE));
+
 
 
 gtk_container_class_install_child_property (cclass,
@@ -281,24 +292,24 @@ gtk_container_class_install_child_property (cclass,
                                   G_PARAM_READWRITE));
 
 gtk_container_class_install_child_property (cclass,
-                                  CHILD_PROP_HANDLE_MOVE,
+                                  CHILD_PROP_HANDLE_RESIZE,
                                   g_param_spec_boolean ("resize-hwnd","resize handle","Whether current widget wrapped by a resize(bottom right) handle.",
                                   FALSE,
                                   G_PARAM_READWRITE));
 
 gtk_container_class_install_child_property (cclass,
-                                  CHILD_PROP_HANDLE_MOVE,
+                                  CHILD_PROP_HANDLE_RIGHT,
                                   g_param_spec_boolean ("right-hwnd","Right handle","Whether current widget wrapped by a right handle.",
                                   FALSE,
                                   G_PARAM_READWRITE));
 
 gtk_container_class_install_child_property (cclass,
-                                  CHILD_PROP_HANDLE_MOVE,
+                                  CHILD_PROP_HANDLE_BOTTOM,
                                   g_param_spec_boolean ("bottom-hwnd","Bottom handle","Whether current widget wrapped by a bottom handle.",
                                   FALSE,
                                   G_PARAM_READWRITE));
 
-
+*/
 
 
 g_type_class_add_private(klass,sizeof(FloatBorderPriv));
@@ -332,10 +343,9 @@ GtkWidget*widget=GTK_WIDGET(fb);
 
 gtk_widget_set_has_window(widget,FALSE);
 
-//priv->actived=TRUE;
 priv->children=NULL;
-priv->maybe_overlapped=TRUE;
-priv->maybe_shrink=TRUE;
+priv->may_overlap=TRUE;
+priv->may_shrink=TRUE;
 priv->hwnd_mask[HWND_RESIZE]=TRUE;
 priv->hwnd_mask[HWND_RIGHT]=TRUE;
 priv->hwnd_mask[HWND_BOTTOM]=TRUE;
@@ -363,7 +373,7 @@ void print_child(FloatBorderChild*fbc,const char*info)
     g_print("child. y:%d\n",fbc->y);
     g_print("child. width:%d\n",fbc->width);
     g_print("child. height:%d\n",fbc->height);
-    g_print("child. actived:%d\n",fbc->actived);
+    g_print("child. active:%d\n",fbc->active);
     g_print("\n----hwnds----\n");
     int i;
     for(i=0;i<N_HWNDS;i++){
@@ -392,11 +402,14 @@ static void float_border_set_property(GObject*object,guint prop_id,const GValue*
 //            fb_set_frozen(fb,priv->frozen);
             gtk_widget_queue_resize(GTK_WIDGET(fb));
             break;
-        case PROP_MAYBE_OVERLAPPED:
-            priv->maybe_overlapped=g_value_get_boolean(value);
+        case PROP_MAY_OVERLAP:
+            priv->may_overlap=g_value_get_boolean(value);
 //            fb_set_maybe_overlapped(fb,priv->maybe_overlapped);
             break;
-
+        case PROP_MAY_SHRINK:
+            priv->may_shrink=g_value_get_boolean(value);
+//            fb_set_maybe_overlapped(fb,priv->maybe_overlapped);
+            break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object,prop_id,pspec);
             break;
@@ -418,8 +431,11 @@ static void float_border_get_property(GObject*object,guint prop_id,GValue*value,
         case PROP_FROZEN:
             g_value_set_boolean(value,priv->frozen);
             break;
-        case PROP_MAYBE_OVERLAPPED:
-            g_value_set_boolean(value,priv->maybe_overlapped);
+        case PROP_MAY_OVERLAP:
+            g_value_set_boolean(value,priv->may_overlap);
+            break;
+        case PROP_MAY_SHRINK:
+            g_value_set_boolean(value,priv->may_shrink);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object,prop_id,pspec);
@@ -555,12 +571,12 @@ float_border_set_child_property (GtkContainer *container,GtkWidget    *child,
             fbchild->hwnded[HWND_BOTTOM]=g_value_get_boolean(value);
             break;
 
-        case CHILD_PROP_ACTIVED:
-            fbchild->actived=g_value_get_boolean(value);
+        case CHILD_PROP_ACTIVE:
+            fbchild->active=g_value_get_boolean(value);
             break;
 
-        case CHILD_PROP_CANBE_OVERLAPPED:
-            fbchild->canbe_overlapped=g_value_get_boolean(value);
+        case CHILD_PROP_OVERLAP:
+            fbchild->overlap=g_value_get_boolean(value);
             break;
 
         default:
@@ -625,13 +641,13 @@ float_border_get_child_property (GtkContainer *container,GtkWidget    *child,
             g_value_set_boolean(value,fbchild->hwnded[HWND_BOTTOM]);
             break;
 
-        case CHILD_PROP_ACTIVED:
-            g_value_set_boolean(value,fbchild->actived);
+        case CHILD_PROP_ACTIVE:
+            g_value_set_boolean(value,fbchild->active);
 
             break;
 
-        case CHILD_PROP_CANBE_OVERLAPPED:
-            g_value_set_boolean(value,fbchild->canbe_overlapped);
+        case CHILD_PROP_OVERLAP:
+            g_value_set_boolean(value,fbchild->overlap);
 
             break;
 
@@ -1030,7 +1046,7 @@ static void create_hwnds(FloatBorderChild*fbc,gpointer d)
     gint attributes_mask;
     GtkAllocation allocation;
 
-    if(fbc->actived && !priv->frozen && gtk_widget_is_sensitive(fbc->widget)){
+    if(fbc->active && !priv->frozen && gtk_widget_is_sensitive(fbc->widget)){
     g_print(":::need  create hwnds \n");
    /* need to create hwnds*/ 
     parent_win=gtk_widget_get_window(widget);
@@ -1458,7 +1474,7 @@ void float_border_put(FloatBorder*fb,GtkWidget*w,int x,int y)
     new_child->y=y;
     new_child->width=0;
     new_child->height=0;
-    new_child->actived=TRUE;
+    new_child->active=TRUE;
     new_child->hwnded[HWND_RIGHT]=TRUE;
     new_child->hwnded[HWND_BOTTOM]=TRUE;
     new_child->hwnded[HWND_RESIZE]=TRUE;
