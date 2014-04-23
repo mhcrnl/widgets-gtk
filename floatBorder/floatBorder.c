@@ -14,9 +14,6 @@ enum{
     CHILD_PROP_0,
     CHILD_PROP_X,
     CHILD_PROP_Y,
-    CHILD_PROP_WIDTH,
-    CHILD_PROP_HEIGHT,
-
 
     CHILD_PROP_HANDLE_MOVE,//TOP_LEFT,
     CHILD_PROP_HANDLE_RIGHT,
@@ -78,8 +75,6 @@ struct floatBorderChild{
 
     gint x;
     gint y;
-    gint width;
-    gint height;
 
     GtkRequisition min_siz;
     gboolean hwnded[N_HWNDS];
@@ -371,8 +366,8 @@ void print_child(FloatBorderChild*fbc,const char*info)
     g_print("child. widget:%x\n",fbc->widget);
     g_print("child. x:%d\n",fbc->x);
     g_print("child. y:%d\n",fbc->y);
-    g_print("child. width:%d\n",fbc->width);
-    g_print("child. height:%d\n",fbc->height);
+//    g_print("child. width:%d\n",fbc->width);
+//    g_print("child. height:%d\n",fbc->height);
     g_print("child. active:%d\n",fbc->active);
     g_print("\n----hwnds----\n");
     int i;
@@ -546,7 +541,7 @@ float_border_set_child_property (GtkContainer *container,GtkWidget    *child,
         case CHILD_PROP_Y:
             fbchild->y=g_value_get_int(value);
             break;
-
+/*
         case CHILD_PROP_WIDTH:
             fbchild->width=g_value_get_int(value);
             break;
@@ -554,7 +549,7 @@ float_border_set_child_property (GtkContainer *container,GtkWidget    *child,
         case CHILD_PROP_HEIGHT:
             fbchild->height=g_value_get_int(value);
             break;
-
+*/
 
         case CHILD_PROP_HANDLE_MOVE:
             fbchild->hwnded[HWND_MOVE]=g_value_get_boolean(value);
@@ -615,7 +610,7 @@ float_border_get_child_property (GtkContainer *container,GtkWidget    *child,
         case CHILD_PROP_Y:
             g_value_set_int(value,fbchild->y);
             break;
-
+/*
         case CHILD_PROP_WIDTH:
             g_value_set_int(value,fbchild->width);
             break;
@@ -623,7 +618,7 @@ float_border_get_child_property (GtkContainer *container,GtkWidget    *child,
         case CHILD_PROP_HEIGHT:
             g_value_set_int(value,fbchild->height);
             break;
-
+*/
 
         case CHILD_PROP_HANDLE_MOVE:
             g_value_set_boolean(value,fbchild->hwnded[HWND_MOVE]);
@@ -760,21 +755,21 @@ static void size_negotiation(FloatBorderChild*fbc,gpointer d){
     SizeInfo*info=(SizeInfo*)d;
 
     GtkRequisition min;
-
     GtkRequisition childmin;
-if(fbc->width==0 || fbc->height==0){
+//if(fbc->width==0 || fbc->height==0){
+    if(fbc->min_siz.width==-1 || fbc->min_siz.width==-1){
     gtk_widget_get_preferred_size(fbc->widget,&childmin,NULL);
-    fbc->width=childmin.width;
-    fbc->height=childmin.height;
+//    fbc->width=childmin.width;
+//    fbc->height=childmin.height;
 
     fbc->min_siz.width=childmin.width;
     fbc->min_siz.height=childmin.height;
 
     fbc->position[RESIZE_CORNER].x=childmin.width;
     fbc->position[RESIZE_CORNER].y=childmin.height;
-}
-    min.width=fbc->width+fbc->x;
-    min.height=fbc->height+fbc->y;
+    }
+    min.width=fbc->min_siz.width+fbc->x;
+    min.height=fbc->min_siz.height+fbc->y;
 
 
 
@@ -1472,8 +1467,11 @@ void float_border_put(FloatBorder*fb,GtkWidget*w,int x,int y)
     new_child=g_slice_new0(FloatBorderChild);
     new_child->x=x;
     new_child->y=y;
-    new_child->width=0;
-    new_child->height=0;
+//    new_child->width=0;
+//    new_child->height=0;
+    new_child->min_siz.width=-1;
+    new_child->min_siz.height=-1;
+
     new_child->active=TRUE;
     new_child->hwnded[HWND_RIGHT]=TRUE;
     new_child->hwnded[HWND_BOTTOM]=TRUE;
