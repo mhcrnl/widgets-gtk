@@ -56,4 +56,21 @@ GType float_border_get_type(void);
 
 
 
+void float_border_put(FloatBorder*fb,GtkWidget*w,int x,int y);
+void float_border_put_with_size(FloatBorder*fb,GtkWidget*w,int x,int y,int width,int height);
+void float_border_remove(FloatBorder*fb,GtkWidget*w);
+
+void float_border_move(FloatBorder*fb,GtkWidget*w,int x,int y);
+void float_border_move_resize(FloatBorder*fb,GtkWidget*w,int x,int y,int width,int height);
+void float_border_resize(FloatBorder*fb,GtkWidget*w,int width,int height);
+
+void float_border_reorder(FloatBorder*fb, GtkWidget*w, GtkWidget*sibling, gboolean above);
+
+
+
+
+
+
+
+
 #endif

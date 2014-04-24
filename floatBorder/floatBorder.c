@@ -1,13 +1,13 @@
 
 #include"floatBorder.h"
-
+#include<stdarg.h>
 
 
 
 #define  X 0
 #define  Y 1
 
-#define HWND_THICKNESS 6
+#define HWND_THICKNESS 4
 
 
 enum{
@@ -45,6 +45,7 @@ N_PROPS
 };
 
 enum{
+    HWND_0,//for padding
 HWND_MOVE,//TOP_LEFT,
 HWND_RIGHT,
 HWND_BOTTOM,
@@ -69,6 +70,7 @@ typedef struct floatBorderChild FloatBorderChild;
 
 
 struct floatBorderChild{
+    FloatBorder*floatborder;
 
     GtkWidget*widget;
     GdkWindow*hwnds[N_HWNDS];
@@ -77,6 +79,7 @@ struct floatBorderChild{
     gint y;
 
     GtkRequisition min_siz;
+    GtkRequisition pref_siz;
     gboolean hwnded[N_HWNDS];
     GdkRectangle position[2];
     int drag_position[2];
@@ -168,11 +171,17 @@ static void float_border_get_child_property(GtkContainer*container,GtkWidget*wid
 
 
 /* FloatBorder */
-
+/*
 void float_border_put(FloatBorder*fb,GtkWidget*w,int x,int y);
 void float_border_remove(FloatBorder*fb,GtkWidget*w);
 
-void float_border_adjust(FloatBorder*fb,GtkWidget*w,int x,int y);
+void float_border_move(FloatBorder*fb,GtkWidget*w,int x,int y);
+void float_border_move_resize(FloatBorder*fb,GtkWidget*w,int x,int y,int width,int height);
+void float_border_resize(FloatBorder*fb,GtkWidget*w,int width,int height);
+
+void float_border_reorder(FloatBorder*fb, GtkWidget*w, GtkWidget*sibling, gboolean above);
+
+*/
 
 
 
@@ -195,7 +204,7 @@ static void float_border_class_init(FloatBorderClass *klass)
     oclass->set_property=float_border_set_property;
     oclass->get_property=float_border_get_property;
 
-//    wclass->draw=float_border_draw;
+    wclass->draw=float_border_draw;
     wclass->size_allocate=float_border_size_allocate;
     wclass->get_preferred_width=float_border_get_preferred_width;
     wclass->get_preferred_height=float_border_get_preferred_height;
@@ -358,7 +367,7 @@ priv->window2child=g_hash_table_new(g_direct_hash,g_direct_equal);
 }
 
 
-
+/*
 void print_child(FloatBorderChild*fbc,const char*info)
 {
 
@@ -366,8 +375,6 @@ void print_child(FloatBorderChild*fbc,const char*info)
     g_print("child. widget:%x\n",fbc->widget);
     g_print("child. x:%d\n",fbc->x);
     g_print("child. y:%d\n",fbc->y);
-//    g_print("child. width:%d\n",fbc->width);
-//    g_print("child. height:%d\n",fbc->height);
     g_print("child. active:%d\n",fbc->active);
     g_print("\n----hwnds----\n");
     int i;
@@ -380,7 +387,7 @@ void print_child(FloatBorderChild*fbc,const char*info)
 
 }
 
-
+*/
 
 
 
@@ -754,23 +761,38 @@ static void size_negotiation(FloatBorderChild*fbc,gpointer d){
 
     SizeInfo*info=(SizeInfo*)d;
 
+int siz_x,siz_y;
+
     GtkRequisition min;
-    GtkRequisition childmin;
 //if(fbc->width==0 || fbc->height==0){
     if(fbc->min_siz.width==-1 || fbc->min_siz.width==-1){
+
+    GtkRequisition childmin;
     gtk_widget_get_preferred_size(fbc->widget,&childmin,NULL);
-//    fbc->width=childmin.width;
-//    fbc->height=childmin.height;
 
     fbc->min_siz.width=childmin.width;
     fbc->min_siz.height=childmin.height;
 
-    fbc->position[RESIZE_CORNER].x=childmin.width;
-    fbc->position[RESIZE_CORNER].y=childmin.height;
-    }
-    min.width=fbc->min_siz.width+fbc->x;
-    min.height=fbc->min_siz.height+fbc->y;
 
+    siz_x=(fbc->min_siz.width < fbc->pref_siz.width)?fbc->pref_siz.width:fbc->min_siz.width;
+    siz_y=(fbc->min_siz.height < fbc->pref_siz.height)?fbc->pref_siz.height:fbc->min_siz.height;
+
+    fbc->position[RESIZE_CORNER].x=siz_x;
+    fbc->position[RESIZE_CORNER].y=siz_y;
+
+
+    }
+
+
+
+    
+    min.width=fbc->pref_siz.width+fbc->x;
+    min.height=fbc->pref_siz.height+fbc->y;
+
+    if(fbc->active){
+        min.width+=HWND_THICKNESS;
+        min.height+=HWND_THICKNESS;
+    }
 
 
     if(min.width > info->expect_width)
@@ -861,10 +883,10 @@ static gboolean float_border_button_press(GtkWidget*widget,GdkEventButton*e)
 
     FloatBorder*fb=FLOAT_BORDER(widget);
     FloatBorderPriv* priv=fb->priv;
-    g_print("BEFORE window 2 fbchild\n");
+//    g_print("BEFORE window 2 fbchild\n");
 
     FloatBorderChild*fbchild=window_to_fbchild(fb,e->window);
-    g_print("AFTER window 2 fbchild[%x]\n",fbchild);
+//    g_print("AFTER window 2 fbchild[%x]\n",fbchild);
 
     if(e->type==GDK_BUTTON_PRESS&&e->button==GDK_BUTTON_PRIMARY){
 
@@ -954,12 +976,12 @@ static gboolean float_border_button_release(GtkWidget*widget,GdkEventButton*e)
 static gboolean float_border_motion_notify(GtkWidget*widget,GdkEventMotion*e)
 {
 
-    g_print(":: Motion Notify(window:%x)\n",e->window);
+//    g_print(":: Motion Notify(window:%x)\n",e->window);
 
     FloatBorder*fb=FLOAT_BORDER(widget);
     FloatBorderPriv* priv=fb->priv;
     FloatBorderChild*fbchild=window_to_fbchild(fb,e->window);
-    g_print("::: fbchild:=%x\n",fbchild);
+//    g_print("::: fbchild:=%x\n",fbchild);
 
     GtkAllocation allocation;
 
@@ -970,32 +992,50 @@ static gboolean float_border_motion_notify(GtkWidget*widget,GdkEventMotion*e)
 
     if(e->window == fbchild->hwnds[HWND_RIGHT]){
         fbchild->position[RESIZE_CORNER].x  += e->x - fbchild->drag_position[X];
+        if(fbchild->shrink){
+        fbchild->position[RESIZE_CORNER].x = CLAMP(fbchild->position[RESIZE_CORNER].x,
+                0,
+                allocation.width-HWND_THICKNESS-fbchild->x);
+        }else{
         fbchild->position[RESIZE_CORNER].x = CLAMP(fbchild->position[RESIZE_CORNER].x,
                 fbchild->min_siz.width,
                 allocation.width-HWND_THICKNESS-fbchild->x);
-        
-//        fbchild->position[]
+        }
     }
 
     if(e->window == fbchild->hwnds[HWND_BOTTOM]){
         fbchild->position[RESIZE_CORNER].y += e->y - fbchild->drag_position[Y];
+        if(fbchild->shrink){
+         fbchild->position[RESIZE_CORNER].y = CLAMP(fbchild->position[RESIZE_CORNER].y,
+                0,
+                allocation.height-HWND_THICKNESS-fbchild->y);
+        }else{
         fbchild->position[RESIZE_CORNER].y = CLAMP(fbchild->position[RESIZE_CORNER].y,
                 fbchild->min_siz.height,
                 allocation.height-HWND_THICKNESS-fbchild->y);
-//        fbchild->position[]
+        }
     }
 
     if(e->window == fbchild->hwnds[HWND_RESIZE]){
         fbchild->position[RESIZE_CORNER].x  += e->x - fbchild->drag_position[X];
+        fbchild->position[RESIZE_CORNER].y += e->y - fbchild->drag_position[Y];
+
+        if(fbchild->shrink){
+        fbchild->position[RESIZE_CORNER].x = CLAMP(fbchild->position[RESIZE_CORNER].x,
+                0,
+                allocation.width-HWND_THICKNESS-fbchild->x);
+        fbchild->position[RESIZE_CORNER].y = CLAMP(fbchild->position[RESIZE_CORNER].y,
+                0,
+                allocation.height-HWND_THICKNESS-fbchild->y);
+        
+        }else{
         fbchild->position[RESIZE_CORNER].x = CLAMP(fbchild->position[RESIZE_CORNER].x,
                 fbchild->min_siz.width,
                 allocation.width-HWND_THICKNESS-fbchild->x);
-
-        fbchild->position[RESIZE_CORNER].y += e->y - fbchild->drag_position[Y];
         fbchild->position[RESIZE_CORNER].y = CLAMP(fbchild->position[RESIZE_CORNER].y,
                 fbchild->min_siz.height,
                 allocation.height-HWND_THICKNESS-fbchild->y);
-//        fbchild->position[]
+        }
     }
 
 
@@ -1017,7 +1057,7 @@ static gboolean float_border_motion_notify(GtkWidget*widget,GdkEventMotion*e)
 
     }
 
-    g_print(":: Motion Notify()\n");
+//    g_print(":: Motion Notify()\n");
 
     return TRUE;
 }
@@ -1030,7 +1070,7 @@ static gboolean float_border_motion_notify(GtkWidget*widget,GdkEventMotion*e)
 static void create_hwnds(FloatBorderChild*fbc,gpointer d)
 {
 
-    g_print(":: create hwnds \n");
+//    g_print(":: create hwnds \n");
 
     FloatBorder*fb=FLOAT_BORDER(d);
     FloatBorderPriv*priv=fb->priv;
@@ -1042,10 +1082,10 @@ static void create_hwnds(FloatBorderChild*fbc,gpointer d)
     GtkAllocation allocation;
 
     if(fbc->active && !priv->frozen && gtk_widget_is_sensitive(fbc->widget)){
-    g_print(":::need  create hwnds \n");
+//    g_print(":::need  create hwnds \n");
    /* need to create hwnds*/ 
     parent_win=gtk_widget_get_window(widget);
-        g_print("window ::%x\n",parent_win);
+//    g_print("window ::%x\n",parent_win);
 
     gtk_widget_get_allocation(widget,&allocation);
 
@@ -1114,14 +1154,14 @@ static void create_hwnds(FloatBorderChild*fbc,gpointer d)
 
     }else{
     //need not to create hwnds for it;
-   g_print("need not create hwnds...\n") ;
+//   g_print("need not create hwnds...\n") ;
     
     
     }
 
 //    print_child(fbc,"after realize");
 
-    g_print("Create hwnds END:::\n");
+//    g_print("Create hwnds END:::\n");
 
 }
 
@@ -1230,7 +1270,7 @@ static void float_border_realize(GtkWidget*widget)
 
     if(!gtk_widget_get_has_window(widget)){
         window=gtk_widget_get_parent_window(widget);
-        g_print("window ::%x\n",window);
+//        g_print("window ::%x\n",window);
         gtk_widget_set_window(widget,window);
         g_object_ref(window);
 //        GTK_WIDGET_CLASS(float_border_parent_class)->realize(widget);
@@ -1262,7 +1302,7 @@ static void float_border_realize(GtkWidget*widget)
 
     }
 
-        g_print("window ::%x\n",window);
+//        g_print("window ::%x\n",window);
 
     //create hwnds for every child;
 
@@ -1337,7 +1377,7 @@ static void float_border_unmap(GtkWidget*widget)
 static void child_sizeallocate(FloatBorderChild*fbchild,gpointer d)
 {
 
-    g_print(":: child_sizeallocate()\n");
+//    g_print(":: child_sizeallocate()\n");
 
     FloatBorder*fb=FLOAT_BORDER(d);
     FloatBorderPriv*priv=fb->priv;
@@ -1350,10 +1390,8 @@ static void child_sizeallocate(FloatBorderChild*fbchild,gpointer d)
     gtk_widget_get_allocation(widget,&allocation);
 
 
-
     if(!gtk_widget_get_visible(fbchild->widget))
         return;
-
 //    gtk_widget_get_preferred_size(fbchild->widget,&child_requisition,NULL);
     
     child_allocation.x=fbchild->x;
@@ -1368,10 +1406,11 @@ static void child_sizeallocate(FloatBorderChild*fbchild,gpointer d)
     child_allocation.height = fbchild->position[RESIZE_CORNER].y;
     gtk_widget_size_allocate (fbchild->widget, &child_allocation);
 
+    fbchild->position[RESIZE_CORNER].width=child_allocation.width;
+    fbchild->position[RESIZE_CORNER].height=child_allocation.height;
+
 
 /*    size allocation for hanles.*/
-    
-
 
     if(fbchild->hwnded[HWND_RIGHT]){
         gdk_window_move_resize(fbchild->hwnds[HWND_RIGHT],
@@ -1380,10 +1419,7 @@ static void child_sizeallocate(FloatBorderChild*fbchild,gpointer d)
                 HWND_THICKNESS,
                 child_allocation.height
                 );
-
     }
-
-
 
     if(fbchild->hwnded[HWND_BOTTOM]){
         gdk_window_move_resize(fbchild->hwnds[HWND_BOTTOM],
@@ -1392,7 +1428,6 @@ static void child_sizeallocate(FloatBorderChild*fbchild,gpointer d)
                 child_allocation.width,
                 HWND_THICKNESS
                 );
-
     }
 
     if(fbchild->hwnded[HWND_RESIZE]){
@@ -1402,7 +1437,6 @@ static void child_sizeallocate(FloatBorderChild*fbchild,gpointer d)
                 HWND_THICKNESS,
                 HWND_THICKNESS
                 );
-
     }
 
     if(fbchild->hwnded[HWND_MOVE]){
@@ -1412,13 +1446,94 @@ static void child_sizeallocate(FloatBorderChild*fbchild,gpointer d)
                 HWND_THICKNESS,
                 HWND_THICKNESS
                 );
-
     }
 
 
 
+}
+
+
+static void draw_child(FloatBorderChild*fbc,gpointer d)
+{
+    FloatBorder*fb=fbc->floatborder;
+    GtkWidget*widget=GTK_WIDGET(fb);
+    
+
+    cairo_t*cr=(cairo_t*)d;
+
+//    cairo_set_source_rgba(cr,0.9,0.9,0.9,0.1);
+    cairo_set_source_rgba(cr,0.,0.,1.,0.1);
+
+    cairo_save(cr);
+    if(fbc->hwnded[HWND_MOVE]){
+        g_print("draw:: HWND_MOVE\n");
+    gtk_cairo_transform_to_window(cr,widget,fbc->hwnds[HWND_MOVE]);
+    cairo_rectangle(cr,0,0,HWND_THICKNESS,HWND_THICKNESS);
+    cairo_fill(cr);
+    }
+    cairo_restore(cr);
+    cairo_save(cr);
+    if(fbc->hwnded[HWND_RESIZE]){
+        g_print("draw:: HWND_RESIZE\n");
+    gtk_cairo_transform_to_window(cr,widget,fbc->hwnds[HWND_RESIZE]);
+    cairo_rectangle(cr,0,0,HWND_THICKNESS,HWND_THICKNESS);
+    cairo_fill(cr);
+    }
+    cairo_restore(cr);
+    cairo_save(cr);
+    if(fbc->hwnded[HWND_RIGHT]){
+        g_print("draw:: HWND_RIGHT\n");
+    gtk_cairo_transform_to_window(cr,widget,fbc->hwnds[HWND_RIGHT]);
+    cairo_rectangle(cr,0,0,
+            HWND_THICKNESS,
+            fbc->position[RESIZE_CORNER].height);
+    cairo_fill(cr);
+    }
+    cairo_restore(cr);
+    cairo_save(cr);
+    if(fbc->hwnded[HWND_BOTTOM]){
+        g_print("draw:: HWND_BOTTOM\n");
+    gtk_cairo_transform_to_window(cr,widget,fbc->hwnds[HWND_BOTTOM]);
+    cairo_rectangle(cr,0,0,
+            fbc->position[RESIZE_CORNER].width,
+            HWND_THICKNESS);
+    cairo_fill(cr);
+    }
+
+    cairo_restore(cr);
+
 
 }
+
+
+
+static gboolean float_border_draw(GtkWidget*widget,cairo_t*cr)
+{
+
+    FloatBorder*fb=FLOAT_BORDER(widget);
+
+//    FloatBorderPriv*priv=fb->priv;
+
+    do_for_all_children(fb,draw_child,cr);
+
+
+GTK_WIDGET_CLASS(float_border_parent_class)->draw(widget,cr);
+return FALSE;
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 static void float_border_size_allocate(GtkWidget*widget, GtkAllocation *allocation)
@@ -1453,7 +1568,46 @@ static void float_border_size_allocate(GtkWidget*widget, GtkAllocation *allocati
 
 
 
-void float_border_put(FloatBorder*fb,GtkWidget*w,int x,int y)
+
+
+
+FloatBorderChild* init_fbchild(GtkWidget*widget,int x,int y,int w,int h,gboolean active,gboolean shrink,...)
+{
+    FloatBorderChild*new_child;
+
+    new_child=g_slice_new0(FloatBorderChild);
+
+    new_child->widget=widget;
+
+    new_child->x=x;
+    new_child->y=y;
+//    new_child->width=0;
+//    new_child->height=0;
+    new_child->min_siz.width=-1;
+    new_child->min_siz.height=-1;
+    
+    new_child->pref_siz.width=w;
+    new_child->pref_siz.height=h;
+
+    new_child->active=active;
+    new_child->shrink=shrink;
+
+    va_list ap;
+    va_start(ap,shrink);
+
+    int hwnd_on;
+    while((hwnd_on=va_arg(ap,int))){
+    new_child->hwnded[hwnd_on]=TRUE;
+    }
+
+    va_end(ap);
+
+    return new_child;
+}
+
+
+
+void _float_border_put(FloatBorder*fb,GtkWidget*widget,int x,int y,int w,int h,int act,int shr)
 {
 
     FloatBorderPriv*priv=fb->priv;
@@ -1462,32 +1616,31 @@ void float_border_put(FloatBorder*fb,GtkWidget*w,int x,int y)
 
 
     g_return_if_fail(IS_FLOAT_BORDER(fb));
-    g_return_if_fail(GTK_IS_WIDGET(w));
+    g_return_if_fail(GTK_IS_WIDGET(widget));
+ 
+    new_child=init_fbchild(widget,x,y,w,h,act,shr,HWND_RIGHT,HWND_BOTTOM,HWND_RESIZE,HWND_MOVE,NULL);
+    new_child->floatborder=fb;
 
-    new_child=g_slice_new0(FloatBorderChild);
-    new_child->x=x;
-    new_child->y=y;
-//    new_child->width=0;
-//    new_child->height=0;
-    new_child->min_siz.width=-1;
-    new_child->min_siz.height=-1;
-
-    new_child->active=TRUE;
-    new_child->hwnded[HWND_RIGHT]=TRUE;
-    new_child->hwnded[HWND_BOTTOM]=TRUE;
-    new_child->hwnded[HWND_RESIZE]=TRUE;
-    new_child->hwnded[HWND_MOVE]=TRUE;
-
-
-    new_child->widget=w;
-
-    gtk_widget_set_parent(w,GTK_WIDGET(fb));
+    gtk_widget_set_parent(widget,GTK_WIDGET(fb));
     priv->children=g_list_append(priv->children,new_child);
-
-//    g_print(":::origin new_child:=%x\n",new_child);
 
 
 }
+
+
+
+void float_border_put(FloatBorder*fb, GtkWidget*w, int x,int y)
+{
+    _float_border_put(fb,w,x,y,-1,-1,TRUE,TRUE);
+
+}
+
+void float_border_put_with_size(FloatBorder*fb, GtkWidget*widget, int x,int y,int w,int h)
+{
+    _float_border_put(fb,widget,x,y,w,h,TRUE,TRUE);
+
+}
+
 
 
 
