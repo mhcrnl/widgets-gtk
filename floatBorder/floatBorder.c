@@ -45,11 +45,11 @@ N_PROPS
 };
 
 enum{
-    HWND_0,//for padding
+    HWND_0,//for padding,init_fbchild();
 HWND_MOVE,//TOP_LEFT,
+HWND_RESIZE,//BOTTOM_RIGHT,
 HWND_RIGHT,
 HWND_BOTTOM,
-HWND_RESIZE,//BOTTOM_RIGHT,
 HWND_TOP,
 HWND_LEFT,
 N_HWNDS
@@ -350,10 +350,12 @@ gtk_widget_set_has_window(widget,FALSE);
 priv->children=NULL;
 priv->may_overlap=TRUE;
 priv->may_shrink=TRUE;
+priv->hwnd_mask[HWND_MOVE]=TRUE;
 priv->hwnd_mask[HWND_RESIZE]=TRUE;
 priv->hwnd_mask[HWND_RIGHT]=TRUE;
 priv->hwnd_mask[HWND_BOTTOM]=TRUE;
-priv->hwnd_mask[HWND_MOVE]=TRUE;
+priv->hwnd_mask[HWND_LEFT]=TRUE;
+priv->hwnd_mask[HWND_TOP]=TRUE;
 
 priv->frozen=FALSE;
 
@@ -780,14 +782,15 @@ int siz_x,siz_y;
     fbc->position[RESIZE_CORNER].x=siz_x;
     fbc->position[RESIZE_CORNER].y=siz_y;
 
-
     }
 
 
 
-    
-    min.width=fbc->pref_siz.width+fbc->x;
-    min.height=fbc->pref_siz.height+fbc->y;
+   /* traverse preferred size of each child widget*/ 
+//    min.width=fbc->pref_siz.width+fbc->x;
+    min.width=fbc->position[RESIZE_CORNER].x+fbc->x;
+//    min.height=fbc->pref_siz.height+fbc->y;
+    min.height=fbc->position[RESIZE_CORNER].y+fbc->y;
 
     if(fbc->active){
         min.width+=HWND_THICKNESS;
@@ -906,6 +909,24 @@ static gboolean float_border_button_press(GtkWidget*widget,GdkEventButton*e)
             return TRUE;
         }
      
+
+        if(e->window == fbchild->hwnds[HWND_LEFT]){
+            priv->is_dragging=TRUE;
+            fbchild->in_drag=TRUE;
+            fbchild->drag_position[X]=e->x;
+            fbchild->drag_position[Y]=0;
+            return TRUE;
+        }
+    
+        if(e->window == fbchild->hwnds[HWND_TOP]){
+            priv->is_dragging=TRUE;
+            fbchild->in_drag=TRUE;
+            fbchild->drag_position[X]=0;
+            fbchild->drag_position[Y]=e->y;
+            return TRUE;
+        }
+
+
         if(e->window == fbchild->hwnds[HWND_RESIZE]){
             priv->is_dragging=TRUE;
             fbchild->in_drag=TRUE;
@@ -951,6 +972,18 @@ static gboolean float_border_button_release(GtkWidget*widget,GdkEventButton*e)
             return TRUE;
         }
 
+        if(e->window == fbchild->hwnds[HWND_LEFT]){
+            priv->is_dragging=FALSE;
+            fbchild->in_drag=FALSE;
+            return TRUE;
+        }
+
+        if(e->window == fbchild->hwnds[HWND_TOP]){
+            priv->is_dragging=FALSE;
+            fbchild->in_drag=FALSE;
+            return TRUE;
+        }
+
         if(e->window == fbchild->hwnds[HWND_RESIZE]){
             priv->is_dragging=FALSE;
             fbchild->in_drag=FALSE;
@@ -988,10 +1021,17 @@ static gboolean float_border_motion_notify(GtkWidget*widget,GdkEventMotion*e)
     gtk_widget_get_allocation(widget,&allocation);
 
 
+    int biasx,biasy;
+    int originx,originpx;
+    int originy,originpy;
+
+
     if(priv->is_dragging){
 
+
     if(e->window == fbchild->hwnds[HWND_RIGHT]){
-        fbchild->position[RESIZE_CORNER].x  += e->x - fbchild->drag_position[X];
+        biasx=e->x - fbchild->drag_position[X];
+        fbchild->position[RESIZE_CORNER].x  += biasx;
         if(fbchild->shrink){
         fbchild->position[RESIZE_CORNER].x = CLAMP(fbchild->position[RESIZE_CORNER].x,
                 0,
@@ -1004,7 +1044,8 @@ static gboolean float_border_motion_notify(GtkWidget*widget,GdkEventMotion*e)
     }
 
     if(e->window == fbchild->hwnds[HWND_BOTTOM]){
-        fbchild->position[RESIZE_CORNER].y += e->y - fbchild->drag_position[Y];
+        biasy=e->y - fbchild->drag_position[Y];
+        fbchild->position[RESIZE_CORNER].y += biasy;
         if(fbchild->shrink){
          fbchild->position[RESIZE_CORNER].y = CLAMP(fbchild->position[RESIZE_CORNER].y,
                 0,
@@ -1016,9 +1057,62 @@ static gboolean float_border_motion_notify(GtkWidget*widget,GdkEventMotion*e)
         }
     }
 
+
+    if(e->window == fbchild->hwnds[HWND_LEFT]){
+//        fbchild->position[RESIZE_CORNER].x  
+        biasx=e->x-fbchild->drag_position[X];
+        originx=fbchild->x;
+        originpx=fbchild->position[RESIZE_CORNER].x;
+
+        fbchild->x += biasx;
+        fbchild->position[RESIZE_CORNER].x -= biasx;
+
+        if(fbchild->shrink){
+        fbchild->x = CLAMP(fbchild->x,
+                HWND_THICKNESS,
+                originx+originpx);
+        fbchild->position[RESIZE_CORNER].x=originx+originpx-fbchild->x;
+
+        }else{
+        fbchild->x = CLAMP(fbchild->x,
+                HWND_THICKNESS,
+                originx+originpx-fbchild->min_siz.width);
+        fbchild->position[RESIZE_CORNER].x=originx+originpx-fbchild->x;
+
+        }
+    }
+
+    if(e->window == fbchild->hwnds[HWND_TOP]){
+//        fbchild->position[RESIZE_CORNER].y 
+        biasy=e->y - fbchild->drag_position[Y];
+        originy=fbchild->y;
+        originpy=fbchild->position[RESIZE_CORNER].y;
+
+        fbchild->y += biasy;
+        fbchild->position[RESIZE_CORNER].y -= biasy;
+
+        if(fbchild->shrink){
+        fbchild->y = CLAMP(fbchild->y,
+                HWND_THICKNESS,
+                originy+originpy);
+        fbchild->position[RESIZE_CORNER].y=originy+originpy-fbchild->y;
+ 
+        }else{
+        fbchild->y = CLAMP(fbchild->y,
+                HWND_THICKNESS,
+                originy+originpy-fbchild->min_siz.height);
+        fbchild->position[RESIZE_CORNER].y=originy+originpy-fbchild->y;
+ 
+        }
+    }
+
+
+
     if(e->window == fbchild->hwnds[HWND_RESIZE]){
-        fbchild->position[RESIZE_CORNER].x  += e->x - fbchild->drag_position[X];
-        fbchild->position[RESIZE_CORNER].y += e->y - fbchild->drag_position[Y];
+        biasx=e->x-fbchild->drag_position[X];
+        biasy=e->y-fbchild->drag_position[Y];
+        fbchild->position[RESIZE_CORNER].x  += biasx;
+        fbchild->position[RESIZE_CORNER].y += biasy;
 
         if(fbchild->shrink){
         fbchild->position[RESIZE_CORNER].x = CLAMP(fbchild->position[RESIZE_CORNER].x,
@@ -1128,6 +1222,30 @@ static void create_hwnds(FloatBorderChild*fbc,gpointer d)
 
     }
     
+
+    if(fbc->hwnded[HWND_LEFT]){
+
+    attributes.cursor=gdk_cursor_new_for_display(gtk_widget_get_display(widget),GDK_SB_H_DOUBLE_ARROW);
+    attributes_mask|=GDK_WA_CURSOR;
+
+    fbc->hwnds[HWND_LEFT]=gdk_window_new(parent_win,&attributes,attributes_mask);
+    gtk_widget_register_window(widget,fbc->hwnds[HWND_LEFT]);
+    g_object_unref(attributes.cursor);
+
+    }
+ 
+    if(fbc->hwnded[HWND_TOP]){
+
+    attributes.cursor=gdk_cursor_new_for_display(gtk_widget_get_display(widget),GDK_SB_V_DOUBLE_ARROW);
+    attributes_mask|=GDK_WA_CURSOR;
+
+    fbc->hwnds[HWND_TOP]=gdk_window_new(parent_win,&attributes,attributes_mask);
+    gtk_widget_register_window(widget,fbc->hwnds[HWND_TOP]);
+    g_object_unref(attributes.cursor);
+
+    }
+
+
  
     if(fbc->hwnded[HWND_RESIZE]){
 
@@ -1155,14 +1273,10 @@ static void create_hwnds(FloatBorderChild*fbc,gpointer d)
     }else{
     //need not to create hwnds for it;
 //   g_print("need not create hwnds...\n") ;
-    
-    
     }
 
 //    print_child(fbc,"after realize");
-
 //    g_print("Create hwnds END:::\n");
-
 }
 
 
@@ -1181,13 +1295,27 @@ static void destroy_hwnds(FloatBorderChild*fbc,gpointer d){
 //        fbc->hwnded[HWND_RIGHT]=FALSE;
     }
 
-
     if(fbc->hwnded[HWND_BOTTOM]){
     
         gtk_widget_unregister_window(widget,fbc->hwnds[HWND_BOTTOM]);
         gdk_window_destroy(fbc->hwnds[HWND_BOTTOM]);
 //        fbc->hwnded[HWND_BOTTOM]=FALSE;
     }
+
+    if(fbc->hwnded[HWND_LEFT]){
+    
+        gtk_widget_unregister_window(widget,fbc->hwnds[HWND_LEFT]);
+        gdk_window_destroy(fbc->hwnds[HWND_LEFT]);
+//        fbc->hwnded[HWND_RIGHT]=FALSE;
+    }
+
+    if(fbc->hwnded[HWND_TOP]){
+    
+        gtk_widget_unregister_window(widget,fbc->hwnds[HWND_TOP]);
+        gdk_window_destroy(fbc->hwnds[HWND_TOP]);
+//        fbc->hwnded[HWND_BOTTOM]=FALSE;
+    }
+
 
     if(fbc->hwnded[HWND_RESIZE]){
     
@@ -1220,6 +1348,14 @@ static void map_hwnds(FloatBorderChild*fbc,gpointer d){
     if(fbc->hwnded[HWND_BOTTOM]){
         gdk_window_show(fbc->hwnds[HWND_BOTTOM]);
     }
+
+    if(fbc->hwnded[HWND_LEFT]){
+        gdk_window_show(fbc->hwnds[HWND_LEFT]);
+    }
+    if(fbc->hwnded[HWND_TOP]){
+        gdk_window_show(fbc->hwnds[HWND_TOP]);
+    }
+
     if(fbc->hwnded[HWND_RESIZE]){
         gdk_window_show(fbc->hwnds[HWND_RESIZE]);
     }
@@ -1244,6 +1380,13 @@ static void unmap_hwnds(FloatBorderChild*fbc,gpointer d){
     if(fbc->hwnded[HWND_BOTTOM]){
         gdk_window_hide(fbc->hwnds[HWND_BOTTOM]);
     }
+    if(fbc->hwnded[HWND_LEFT]){
+        gdk_window_hide(fbc->hwnds[HWND_LEFT]);
+    }
+    if(fbc->hwnded[HWND_TOP]){
+        gdk_window_hide(fbc->hwnds[HWND_TOP]);
+    }
+
     if(fbc->hwnded[HWND_RESIZE]){
         gdk_window_hide(fbc->hwnds[HWND_RESIZE]);
     }
@@ -1430,6 +1573,25 @@ static void child_sizeallocate(FloatBorderChild*fbchild,gpointer d)
                 );
     }
 
+    if(fbchild->hwnded[HWND_LEFT]){
+        gdk_window_move_resize(fbchild->hwnds[HWND_LEFT],
+                child_allocation.x-HWND_THICKNESS,
+                child_allocation.y,
+                HWND_THICKNESS,
+                child_allocation.height
+                );
+    }
+
+    if(fbchild->hwnded[HWND_TOP]){
+        gdk_window_move_resize(fbchild->hwnds[HWND_TOP],
+                child_allocation.x,
+                child_allocation.y-HWND_THICKNESS,
+                child_allocation.width,
+                HWND_THICKNESS
+                );
+    }
+
+
     if(fbchild->hwnded[HWND_RESIZE]){
         gdk_window_move_resize(fbchild->hwnds[HWND_RESIZE],
                 child_allocation.x+fbchild->position[RESIZE_CORNER].x,
@@ -1457,16 +1619,18 @@ static void draw_child(FloatBorderChild*fbc,gpointer d)
 {
     FloatBorder*fb=fbc->floatborder;
     GtkWidget*widget=GTK_WIDGET(fb);
-    
+  
 
     cairo_t*cr=(cairo_t*)d;
+
+    gtk_container_propagate_draw(GTK_CONTAINER(fb),fbc->widget,cr);
 
 //    cairo_set_source_rgba(cr,0.9,0.9,0.9,0.1);
     cairo_set_source_rgba(cr,0.,0.,1.,0.1);
 
     cairo_save(cr);
     if(fbc->hwnded[HWND_MOVE]){
-        g_print("draw:: HWND_MOVE\n");
+//        g_print("draw:: HWND_MOVE\n");
     gtk_cairo_transform_to_window(cr,widget,fbc->hwnds[HWND_MOVE]);
     cairo_rectangle(cr,0,0,HWND_THICKNESS,HWND_THICKNESS);
     cairo_fill(cr);
@@ -1474,7 +1638,7 @@ static void draw_child(FloatBorderChild*fbc,gpointer d)
     cairo_restore(cr);
     cairo_save(cr);
     if(fbc->hwnded[HWND_RESIZE]){
-        g_print("draw:: HWND_RESIZE\n");
+//        g_print("draw:: HWND_RESIZE\n");
     gtk_cairo_transform_to_window(cr,widget,fbc->hwnds[HWND_RESIZE]);
     cairo_rectangle(cr,0,0,HWND_THICKNESS,HWND_THICKNESS);
     cairo_fill(cr);
@@ -1482,7 +1646,7 @@ static void draw_child(FloatBorderChild*fbc,gpointer d)
     cairo_restore(cr);
     cairo_save(cr);
     if(fbc->hwnded[HWND_RIGHT]){
-        g_print("draw:: HWND_RIGHT\n");
+//        g_print("draw:: HWND_RIGHT\n");
     gtk_cairo_transform_to_window(cr,widget,fbc->hwnds[HWND_RIGHT]);
     cairo_rectangle(cr,0,0,
             HWND_THICKNESS,
@@ -1492,13 +1656,35 @@ static void draw_child(FloatBorderChild*fbc,gpointer d)
     cairo_restore(cr);
     cairo_save(cr);
     if(fbc->hwnded[HWND_BOTTOM]){
-        g_print("draw:: HWND_BOTTOM\n");
+//        g_print("draw:: HWND_BOTTOM\n");
     gtk_cairo_transform_to_window(cr,widget,fbc->hwnds[HWND_BOTTOM]);
     cairo_rectangle(cr,0,0,
             fbc->position[RESIZE_CORNER].width,
             HWND_THICKNESS);
     cairo_fill(cr);
     }
+    cairo_restore(cr);
+    cairo_save(cr);
+    if(fbc->hwnded[HWND_LEFT]){
+//        g_print("draw:: HWND_BOTTOM\n");
+    gtk_cairo_transform_to_window(cr,widget,fbc->hwnds[HWND_LEFT]);
+    cairo_rectangle(cr,0,0,
+            HWND_THICKNESS,
+            fbc->position[RESIZE_CORNER].height);
+    cairo_fill(cr);
+    }
+    cairo_restore(cr);
+    cairo_save(cr);
+    if(fbc->hwnded[HWND_TOP]){
+//        g_print("draw:: HWND_BOTTOM\n");
+    gtk_cairo_transform_to_window(cr,widget,fbc->hwnds[HWND_TOP]);
+    cairo_rectangle(cr,0,0,
+            fbc->position[RESIZE_CORNER].width,
+            HWND_THICKNESS);
+    cairo_fill(cr);
+    }
+
+
 
     cairo_restore(cr);
 
@@ -1514,10 +1700,10 @@ static gboolean float_border_draw(GtkWidget*widget,cairo_t*cr)
 
 //    FloatBorderPriv*priv=fb->priv;
 
+//GTK_WIDGET_CLASS(float_border_parent_class)->draw(widget,cr);
     do_for_all_children(fb,draw_child,cr);
 
 
-GTK_WIDGET_CLASS(float_border_parent_class)->draw(widget,cr);
 return FALSE;
 
 }
@@ -1569,9 +1755,19 @@ static void float_border_size_allocate(GtkWidget*widget, GtkAllocation *allocati
 
 
 
+static void inherit_props(FloatBorder*fb,FloatBorderChild*fbc)
+{
+
+    FloatBorderPriv*priv=fb->priv;
+
+    fbc->shrink=priv->may_shrink&fbc->shrink;
+    fbc->overlap=priv->may_overlap&fbc->overlap;
+    fbc->floatborder=fb;
+
+}
 
 
-FloatBorderChild* init_fbchild(GtkWidget*widget,int x,int y,int w,int h,gboolean active,gboolean shrink,...)
+static FloatBorderChild* init_fbchild(GtkWidget*widget,int x,int y,int w,int h,gboolean active,gboolean shrink,...)
 {
     FloatBorderChild*new_child;
 
@@ -1607,19 +1803,18 @@ FloatBorderChild* init_fbchild(GtkWidget*widget,int x,int y,int w,int h,gboolean
 
 
 
-void _float_border_put(FloatBorder*fb,GtkWidget*widget,int x,int y,int w,int h,int act,int shr)
+static void _float_border_put(FloatBorder*fb,GtkWidget*widget,int x,int y,int w,int h,int act,int shr)
 {
 
     FloatBorderPriv*priv=fb->priv;
     FloatBorderChild*new_child;
 
 
-
     g_return_if_fail(IS_FLOAT_BORDER(fb));
     g_return_if_fail(GTK_IS_WIDGET(widget));
  
-    new_child=init_fbchild(widget,x,y,w,h,act,shr,HWND_RIGHT,HWND_BOTTOM,HWND_RESIZE,HWND_MOVE,NULL);
-    new_child->floatborder=fb;
+    new_child=init_fbchild(widget,x,y,w,h,act,shr,HWND_RIGHT,HWND_BOTTOM,HWND_LEFT,HWND_TOP,HWND_RESIZE,HWND_MOVE,NULL);
+    inherit_props(fb,new_child);
 
     gtk_widget_set_parent(widget,GTK_WIDGET(fb));
     priv->children=g_list_append(priv->children,new_child);
@@ -1631,7 +1826,7 @@ void _float_border_put(FloatBorder*fb,GtkWidget*widget,int x,int y,int w,int h,i
 
 void float_border_put(FloatBorder*fb, GtkWidget*w, int x,int y)
 {
-    _float_border_put(fb,w,x,y,-1,-1,TRUE,TRUE);
+    _float_border_put(fb,w,x,y,-1,-1,TRUE,FALSE);
 
 }
 
