@@ -24,7 +24,7 @@ int main(int argc,char**argv)
     gtk_container_add(GTK_CONTAINER(win),fb);
 
     float_border_put(FLOAT_BORDER(fb),button0,100,100);
-    float_border_put(FLOAT_BORDER(fb),button1,150,300);
+    float_border_put_with_size(FLOAT_BORDER(fb),button1,150,300,200,200);
 
 
     gtk_widget_show_all(win);
