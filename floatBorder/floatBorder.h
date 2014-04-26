@@ -90,6 +90,9 @@ void float_border_set_active(FloatBorder*fb,GtkWidget*w,gboolean set);
 
 void float_border_reorder(FloatBorder*fb, GtkWidget*w, GtkWidget*sibling, gboolean above);
 
+void float_border_set_hwnds(FloatBorder*fb, GtkWidget*w,...);
+void float_border_add_hwnds(FloatBorder*fb, GtkWidget*w,...);
+void float_border_remove_hwnds(FloatBorder*fb, GtkWidget*w,...);
 
 
 
