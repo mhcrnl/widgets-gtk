@@ -85,6 +85,9 @@ void float_border_move(FloatBorder*fb,GtkWidget*w,int x,int y);
 void float_border_resize(FloatBorder*fb,GtkWidget*w,int width,int height);
 void float_border_move_resize(FloatBorder*fb,GtkWidget*w,int x,int y,int width,int height);
 
+
+void float_border_set_active(FloatBorder*fb,GtkWidget*w,gboolean set);
+
 void float_border_reorder(FloatBorder*fb, GtkWidget*w, GtkWidget*sibling, gboolean above);
 
 

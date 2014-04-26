@@ -111,8 +111,11 @@ GHashTable* window2child;
 /* GObject */
 static void float_border_set_property(GObject*object,guint prop_id,const GValue*value,GParamSpec*psepc);
 static void float_border_get_property(GObject*object,guint prop_id, GValue*value,GParamSpec*psepc);
+static void float_border_finalize(GObject*object);
 
 
+static void fb_set_frozen(FloatBorder*fb,gboolean set);
+static void fb_set_may_overlap(FloatBorder*fb,gboolean set);
 
 /* GtkWidget */
 
@@ -163,7 +166,7 @@ static void float_border_get_child_property(GtkContainer*container,GtkWidget*wid
 
 
 /* FloatBorder */
-/*
+
 void float_border_put(FloatBorder*fb,GtkWidget*w,int x,int y);
 void float_border_remove(FloatBorder*fb,GtkWidget*w);
 
@@ -173,7 +176,7 @@ void float_border_resize(FloatBorder*fb,GtkWidget*w,int width,int height);
 
 void float_border_reorder(FloatBorder*fb, GtkWidget*w, GtkWidget*sibling, gboolean above);
 
-*/
+
 
 
 
@@ -195,6 +198,7 @@ static void float_border_class_init(FloatBorderClass *klass)
 
     oclass->set_property=float_border_set_property;
     oclass->get_property=float_border_get_property;
+    oclass->finalize=float_border_finalize;
 
     wclass->draw=float_border_draw;
     wclass->size_allocate=float_border_size_allocate;
@@ -361,17 +365,15 @@ static void float_border_set_property(GObject*object,guint prop_id,const GValue*
     switch(prop_id){
     
         case PROP_FROZEN:
-            priv->frozen=g_value_get_boolean(value);
-//            fb_set_frozen(fb,priv->frozen);
-            gtk_widget_queue_resize(GTK_WIDGET(fb));
+            fb_set_frozen(fb,g_value_get_boolean(value));
+//            gtk_widget_queue_resize(GTK_WIDGET(fb));
             break;
         case PROP_MAY_OVERLAP:
             priv->may_overlap=g_value_get_boolean(value);
 //            fb_set_maybe_overlapped(fb,priv->maybe_overlapped);
             break;
         case PROP_MAY_SHRINK:
-            priv->may_shrink=g_value_get_boolean(value);
-//            fb_set_maybe_overlapped(fb,priv->maybe_overlapped);
+            fb_set_may_overlap(fb,g_value_get_boolean(value));
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object,prop_id,pspec);
@@ -409,6 +411,18 @@ static void float_border_get_property(GObject*object,guint prop_id,GValue*value,
 }
 
 
+static void float_border_finalize(GObject*object)
+{
+
+FloatBorder* self=FLOAT_BORDER(object);
+
+g_hash_table_destroy(self->priv->widget2child);
+g_hash_table_destroy(self->priv->window2child);
+
+
+G_OBJECT_CLASS(float_border_parent_class)->finalize(object);
+
+}
 
 
 
@@ -495,28 +509,6 @@ void print_childs(FloatBorder*fb)
     }
 
 }
-
-
-
-
-static void apply_child_props(FloatBorderChild*fbchild,...)
-{
-
-    /*set handles*/
-
-    
-
-
-    /*set shrink*/
-
-
-
-    /*set overlap*/
-
-
-
-}
-
 
 
 
@@ -1116,7 +1108,7 @@ static gboolean float_border_motion_notify(GtkWidget*widget,GdkEventMotion*e)
     if(e->window == fbchild->hwnds[HWND_RIGHT]){
         biasx=e->x - fbchild->drag_position[X];
         fbchild->position[REF_CORNER].x  += biasx;
-        if(fbchild->shrink){
+        if(fbchild->shrink && priv->may_shrink){
         fbchild->position[REF_CORNER].x = CLAMP(fbchild->position[REF_CORNER].x,
                 0,
                 allocation.width-HWND_THICKNESS-fbchild->x);
@@ -1130,7 +1122,7 @@ static gboolean float_border_motion_notify(GtkWidget*widget,GdkEventMotion*e)
     if(e->window == fbchild->hwnds[HWND_BOTTOM]){
         biasy=e->y - fbchild->drag_position[Y];
         fbchild->position[REF_CORNER].y += biasy;
-        if(fbchild->shrink){
+        if(fbchild->shrink && priv->may_shrink){
          fbchild->position[REF_CORNER].y = CLAMP(fbchild->position[REF_CORNER].y,
                 0,
                 allocation.height-HWND_THICKNESS-fbchild->y);
@@ -1151,7 +1143,7 @@ static gboolean float_border_motion_notify(GtkWidget*widget,GdkEventMotion*e)
         fbchild->x += biasx;
         fbchild->position[REF_CORNER].x -= biasx;
 
-        if(fbchild->shrink){
+        if(fbchild->shrink && priv->may_shrink){
         fbchild->x = CLAMP(fbchild->x,
                 HWND_THICKNESS,
                 originx+originpx);
@@ -1175,7 +1167,7 @@ static gboolean float_border_motion_notify(GtkWidget*widget,GdkEventMotion*e)
         fbchild->y += biasy;
         fbchild->position[REF_CORNER].y -= biasy;
 
-        if(fbchild->shrink){
+        if(fbchild->shrink && priv->may_shrink){
         fbchild->y = CLAMP(fbchild->y,
                 HWND_THICKNESS,
                 originy+originpy);
@@ -1198,7 +1190,7 @@ static gboolean float_border_motion_notify(GtkWidget*widget,GdkEventMotion*e)
         fbchild->position[REF_CORNER].x  += biasx;
         fbchild->position[REF_CORNER].y += biasy;
 
-        if(fbchild->shrink){
+        if(fbchild->shrink && priv->may_shrink){
         fbchild->position[REF_CORNER].x = CLAMP(fbchild->position[REF_CORNER].x,
                 0,
                 allocation.width-HWND_THICKNESS-fbchild->x);
@@ -1228,7 +1220,7 @@ static gboolean float_border_motion_notify(GtkWidget*widget,GdkEventMotion*e)
         fbchild->position[REF_CORNER].x  += biasx;
         fbchild->position[REF_CORNER].y -= biasy;
 
-        if(fbchild->shrink){
+        if(fbchild->shrink && priv->may_shrink){
         fbchild->y = CLAMP(fbchild->y,
                 HWND_THICKNESS,
                 originy+originpy);
@@ -1261,7 +1253,7 @@ static gboolean float_border_motion_notify(GtkWidget*widget,GdkEventMotion*e)
         fbchild->position[REF_CORNER].x -= biasx;
         fbchild->position[REF_CORNER].y += biasy;
 
-        if(fbchild->shrink){
+        if(fbchild->shrink && priv->may_shrink){
         fbchild->x = CLAMP(fbchild->x,
                 HWND_THICKNESS,
                 originx+originpx);
@@ -1296,7 +1288,7 @@ static gboolean float_border_motion_notify(GtkWidget*widget,GdkEventMotion*e)
         fbchild->position[REF_CORNER].x -= biasx;
         fbchild->position[REF_CORNER].y -= biasy;
 
-        if(fbchild->shrink){
+        if(fbchild->shrink && priv->may_shrink){
         fbchild->x = CLAMP(fbchild->x,
                 HWND_THICKNESS,
                 originx+originpx);
@@ -2563,39 +2555,6 @@ static void dispose_hwnds(FloatBorderChild*fbchild)
 
 
 
-void float_border_set_active(FloatBorder*fb,GtkWidget*w,gboolean set)
-{
-
-    g_return_if_fail(IS_FLOAT_BORDER(fb));
-    g_return_if_fail(GTK_WIDGET(fb) == gtk_widget_get_parent(w));
-
-    FloatBorderChild*fbchild=get_child_by_widget(fb,w);
-
-//    g_message("set active..][[[[[[[[[[]]]]%d ",set);
-//    if(fbchild->active==set)
-//        return;
-//    g_message("set active..][[[[[[[[[[]]]]%d ",set);
-    int i;
-        for(i=1; i< N_HWNDS; i++){
-        if(fbchild->hwnds[i]){
-            g_print(" hndws[%d] available..\n",i);
-            fbchild->hwnded[i]=set;
-        }
-        }
-        fbchild->active=set;
-
-        dispose_hwnds(fbchild);
-
-    gtk_widget_queue_draw(GTK_WIDGET(fb));
-}
-
-
-
-
-
-
-
-
 void float_border_set_hwnds(FloatBorder*fb, GtkWidget*w,...)
 {   
    
@@ -2703,15 +2662,15 @@ void float_border_reorder(FloatBorder*fb, GtkWidget*w, GtkWidget*sibling, gboole
     FloatBorderChild*fbchild=get_child_by_widget(fb,w);
     FloatBorderChild*sibchild=get_child_by_widget(fb,sibling);
 
+    priv->children=g_list_remove(priv->children,fbchild);
     int pos=g_list_index(priv->children,sibling);
     g_print("Pos   ::%d\n",pos);
 
-    priv->children=g_list_remove(priv->children,fbchild);
 
     if(above)
         priv->children=g_list_insert(priv->children,fbchild,pos);
     else
-        priv->children=g_list_insert_before(priv->children,fbchild,pos);
+        priv->children=g_list_insert(priv->children,fbchild,pos-1);
 
 
     for_all_children(fb,unmap_hwnds,fb);
@@ -2720,6 +2679,102 @@ void float_border_reorder(FloatBorder*fb, GtkWidget*w, GtkWidget*sibling, gboole
 
 
 }
+
+
+
+
+static gboolean set_active(FloatBorderChild*fbc,gpointer d)
+{
+
+    gboolean set= GPOINTER_TO_INT(d);
+
+    g_message("set active..][[[[[[[[[[]]]]%d ",set);
+    if(fbc->active==set)
+        return FALSE;
+    
+    int i;
+        for(i=1; i< N_HWNDS; i++){
+        if(fbc->hwnds[i]){
+//            g_print(" hndws[%d] available..\n",i);
+            fbc->hwnded[i]=set;
+        }
+        }
+        fbc->active=set;
+        dispose_hwnds(fbc);
+
+        return FALSE;
+
+}
+
+
+
+
+
+
+void float_border_set_active(FloatBorder*fb,GtkWidget*w,gboolean set)
+{
+
+    g_return_if_fail(IS_FLOAT_BORDER(fb));
+    g_return_if_fail(GTK_WIDGET(fb) == gtk_widget_get_parent(w));
+
+    FloatBorderChild*fbchild=get_child_by_widget(fb,w);
+/*
+//    g_message("set active..][[[[[[[[[[]]]]%d ",set);
+    if(fbchild->active==set)
+        return;
+//    g_message("set active..][[[[[[[[[[]]]]%d ",set);
+    int i;
+        for(i=1; i< N_HWNDS; i++){
+        if(fbchild->hwnds[i]){
+            g_print(" hndws[%d] available..\n",i);
+            fbchild->hwnded[i]=set;
+        }
+        }
+        fbchild->active=set;
+
+        dispose_hwnds(fbchild);
+*/
+
+    set_active(fbchild,GINT_TO_POINTER(set));
+
+//    gtk_widget_queue_draw(GTK_WIDGET(fb));
+}
+
+
+
+
+
+
+
+
+
+static void fb_set_frozen(FloatBorder*fb,gboolean set)
+{
+
+    g_message("Set Frozen>>>");
+    g_message("..][[[[[[[[[[]]]]%d ",set);
+    
+    FloatBorderPriv* priv=fb->priv;
+    if(priv->frozen==set)
+        return;
+    priv->frozen=set;
+
+    for_all_children(fb, set_active,GINT_TO_POINTER(!set));
+
+}
+
+
+static void fb_set_may_overlap(FloatBorder*fb,gboolean set)
+{
+
+    FloatBorderPriv* priv=fb->priv;
+    if(priv->may_overlap==set)
+        return;
+    priv->may_overlap=set;
+
+
+}
+
 
 
 
