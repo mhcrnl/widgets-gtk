@@ -150,6 +150,8 @@ int main(int argc,char**argv)
 
     float_border_put(FLOAT_BORDER(fb),widget3,200,80);
 
+    GdkRGBA trans={0,0,0,0};
+    gtk_widget_override_background_color(widget3,0,&trans);
 
     g_signal_connect(G_OBJECT(win),"draw",G_CALLBACK(win_draw),NULL);
 
