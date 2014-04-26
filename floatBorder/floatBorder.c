@@ -2092,11 +2092,11 @@ static void remove_cache(FloatBorderChild*fbchild)
 void float_border_remove(FloatBorder*fb,GtkWidget*w)
 {
 
-    FloatBorderPriv*priv=fb->priv;
-    FloatBorderChild* fbchild;
-
     g_return_if_fail(IS_FLOAT_BORDER(fb));
     g_return_if_fail(GTK_WIDGET(fb) == gtk_widget_get_parent(w));
+
+    FloatBorderPriv*priv=fb->priv;
+    FloatBorderChild* fbchild;
 
     fbchild=get_child_by_widget(fb,w);
     if(fbchild){
@@ -2122,7 +2122,7 @@ void float_border_remove(FloatBorder*fb,GtkWidget*w)
 
 void float_border_move(FloatBorder*fb,GtkWidget*w,int tox,int toy)
 {
-    g_print("FloatBorder*::%x\n\n",fb);
+    //g_print("FloatBorder*::%x\n\n",fb);
     
     g_return_if_fail(IS_FLOAT_BORDER(fb));
     g_return_if_fail(GTK_WIDGET(fb) == gtk_widget_get_parent(w));
@@ -2131,7 +2131,7 @@ void float_border_move(FloatBorder*fb,GtkWidget*w,int tox,int toy)
     FloatBorderChild*fbchild=get_child_by_widget(fb,w);
 
     if(fbchild==NULL)
-        g_warning(" The Widget you specified is not contained by Container.");
+        g_warning(" The Widget you specified is not contained by FloatBorder.");
 
     fbchild->x=tox;
     fbchild->y=toy;
@@ -2150,7 +2150,7 @@ void float_border_resize(FloatBorder*fb,GtkWidget*w,int towidth,int toheight)
     g_return_if_fail(GTK_WIDGET(fb) == gtk_widget_get_parent(w));
 
     if(fbchild==NULL)
-        g_warning(" The Widget you specified is not contained by Container.");
+        g_warning(" The Widget you specified is not contained by FloatBorder.");
 
     fbchild->position[REF_CORNER].x=towidth;
     fbchild->position[REF_CORNER].y=toheight;
@@ -2172,7 +2172,7 @@ void float_border_get_current_size(FloatBorder*fb,GtkWidget*w,int* width,int* he
     FloatBorderChild*fbchild=get_child_by_widget(fb,w);  
 
     if(fbchild==NULL)
-        g_warning(" The Widget you specified is not contained by Container.");
+        g_warning(" The Widget you specified is not contained by FloatBorder.");
 
     if(width)
         *width=fbchild->position[REF_CORNER].x;
@@ -2192,7 +2192,7 @@ void float_border_get_current_position(FloatBorder*fb,GtkWidget*w,int* x,int* y)
     FloatBorderChild*fbchild=get_child_by_widget(fb,w);  
 
     if(fbchild==NULL)
-        g_warning(" The Widget you specified is not contained by Container.");
+        g_warning(" The Widget you specified is not contained by FloatBorder.");
 
     if(x)
         *x=fbchild->x;
@@ -2218,7 +2218,7 @@ void float_border_move_resize(FloatBorder*fb,GtkWidget*w,int tox,int toy,int tow
     
 
     if(fbchild==NULL)
-        g_warning(" The Widget you specified is not contained by Container.");
+        g_warning(" The Widget you specified is not contained by FloatBorder.");
 
     fbchild->x=tox;
     fbchild->y=toy;
@@ -2255,7 +2255,7 @@ static GdkWindow* create_hwin(FloatBorderChild* fbc, gint type)
     gint attributes_mask;
 
     parent_win=gtk_widget_get_window(widget);
-    g_message("window ::%x\n",parent_win);
+//    g_message("window ::%x\n",parent_win);
     display=gtk_widget_get_display(widget);
 
     attributes.window_type=GDK_WINDOW_CHILD;
@@ -2387,7 +2387,7 @@ static GdkWindow* create_hwin(FloatBorderChild* fbc, gint type)
 static void dispose_hwnds(FloatBorderChild*fbchild)
 {
     
-    if(!gtk_widget_get_realized(fbchild->floatborder))
+    if(!gtk_widget_get_realized(GTK_WIDGET(fbchild->floatborder)))
         return;
     int i;
     for(i=1;i<N_HWNDS;i++){
@@ -2516,14 +2516,14 @@ void float_border_reorder(FloatBorder*fb, GtkWidget*w, GtkWidget*sibling, gboole
     FloatBorderChild*sibchild=get_child_by_widget(fb,sibling);
 
     priv->children=g_list_remove(priv->children,fbchild);
-    int pos=g_list_index(priv->children,sibling);
+    int pos=g_list_index(priv->children,sibchild);
     g_print("Pos   ::%d\n",pos);
 
 
     if(above)
-        priv->children=g_list_insert(priv->children,fbchild,pos);
+        priv->children=g_list_insert(priv->children,fbchild,pos+1);
     else
-        priv->children=g_list_insert(priv->children,fbchild,pos-1);
+        priv->children=g_list_insert(priv->children,fbchild,pos);
 
 
     for_all_children(fb,unmap_hwnds,fb);
