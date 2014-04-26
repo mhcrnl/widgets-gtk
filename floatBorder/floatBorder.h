@@ -22,6 +22,22 @@
 
 
 
+enum{
+    HWND_0,//for padding,init_fbchild();
+HWND_MOVE,//TOP_LEFT,
+HWND_BR_RESIZE,
+HWND_TR_RESIZE,
+HWND_BL_RESIZE,
+HWND_TL_RESIZE,
+HWND_RIGHT,
+HWND_BOTTOM,
+HWND_TOP,
+HWND_LEFT,
+N_HWNDS
+
+};
+
+
 
 
 
@@ -55,14 +71,19 @@ GType float_border_get_type(void);
 
 
 
+GtkWidget* float_border_new(gboolean frozen,gboolean shrink);
 
 void float_border_put(FloatBorder*fb,GtkWidget*w,int x,int y);
 void float_border_put_with_size(FloatBorder*fb,GtkWidget*w,int x,int y,int width,int height);
 void float_border_remove(FloatBorder*fb,GtkWidget*w);
 
+void float_border_get_current_size(FloatBorder*fb,GtkWidget*w,int* width,int* height);
+void float_border_get_current_position(FloatBorder*fb,GtkWidget*w,int* x,int* y);
+int float_border_count(FloatBorder*fb);
+
 void float_border_move(FloatBorder*fb,GtkWidget*w,int x,int y);
-void float_border_move_resize(FloatBorder*fb,GtkWidget*w,int x,int y,int width,int height);
 void float_border_resize(FloatBorder*fb,GtkWidget*w,int width,int height);
+void float_border_move_resize(FloatBorder*fb,GtkWidget*w,int x,int y,int width,int height);
 
 void float_border_reorder(FloatBorder*fb, GtkWidget*w, GtkWidget*sibling, gboolean above);
 
