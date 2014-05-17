@@ -96,6 +96,7 @@ GList *children;
 guint may_overlap:1;
 guint may_shrink:1;
 guint frozen:1;
+guint show_border:1;
 
 gboolean hwnd_mask[N_HWNDS];
 
@@ -140,6 +141,7 @@ static gboolean float_border_button_release(GtkWidget*widget,GdkEventButton*e);
 static gboolean float_border_motion_notify(GtkWidget*widget,GdkEventMotion*e);
 
 
+static void dispose_hwnds(FloatBorderChild*fbchild);
 
 
 
@@ -322,6 +324,7 @@ priv->hwnd_mask[HWND_RIGHT]=TRUE;
 priv->hwnd_mask[HWND_BOTTOM]=TRUE;
 priv->hwnd_mask[HWND_LEFT]=TRUE;
 priv->hwnd_mask[HWND_TOP]=TRUE;
+priv->show_border=TRUE;
 /*
 priv->frozen=FALSE;
 priv->may_overlap=TRUE;
@@ -433,19 +436,21 @@ static void for_all_children(FloatBorder*fb,FBCallBack callback, gpointer data)
 static FloatBorderChild*get_child_by_widget(FloatBorder*fb,GtkWidget*w)
 {
 
+//    g_message("get_child_by_widget()");
+
     FloatBorderPriv*priv=fb->priv;
     FloatBorderChild*fbchild;
    
     g_return_val_if_fail(IS_FLOAT_BORDER(fb),NULL);
     g_return_val_if_fail(GTK_IS_WIDGET(w),NULL);
 
-
+/*
     fbchild=g_hash_table_lookup(priv->widget2child,w);
 
     if(fbchild)
         return fbchild;
-
-    g_message("---->widget[%x] not cached",w);
+*/
+//    g_message("---->widget[%x] not cached",w);
     GList*children;
 
     children=priv->children;
@@ -455,7 +460,7 @@ static FloatBorderChild*get_child_by_widget(FloatBorder*fb,GtkWidget*w)
         fbchild=children->data;
 
             if(fbchild->widget == w){
-            g_hash_table_insert(priv->widget2child,w,fbchild);
+//            g_hash_table_insert(priv->widget2child,w,fbchild);
 
                 return fbchild;
             }
@@ -479,14 +484,12 @@ static FloatBorderChild*get_child_by_window(FloatBorder*fb,GdkWindow*window)
 
     g_return_val_if_fail(IS_FLOAT_BORDER(fb),NULL);
     g_return_val_if_fail(GDK_IS_WINDOW(window),NULL);
-
+/*
     fbchild=g_hash_table_lookup(priv->window2child,window);
-
-
     if(fbchild)
         return fbchild;
-
-    g_message("---->window[%x] not cached",window);
+*/
+//    g_message("---->window[%x] not cached",window);
     GList*list;
     for (list=priv->children;list;list=list->next){
     
@@ -497,8 +500,7 @@ static FloatBorderChild*get_child_by_window(FloatBorder*fb,GdkWindow*window)
             if(!fbchild->hwnded[i])
                 continue;
             if(fbchild->hwnds[i] == window){
-
-            g_hash_table_insert(priv->window2child,window,fbchild);
+//            g_hash_table_insert(priv->window2child,window,fbchild);
                 return fbchild;
             }
         }
@@ -682,6 +684,7 @@ static void _float_border_forall(GtkContainer*container, gboolean include_intern
     FloatBorderChild*fbchild;
 
     GList*list=priv->children;
+//    g_print("=-list::%x\n\n",list);
     while(list){
     fbchild=list->data;
    (*callback)(fbchild->widget,callback_data); 
@@ -1268,7 +1271,7 @@ static gboolean create_hwnds(FloatBorderChild*fbc,gpointer d)
 
 //    g_print(":: create hwnds \n");
 
-    FloatBorder*fb=FLOAT_BORDER(d);
+    FloatBorder*fb=fbc->floatborder;//FLOAT_BORDER(d);
     FloatBorderPriv*priv=fb->priv;
     GtkWidget*widget=GTK_WIDGET(fb);
 
@@ -1416,9 +1419,10 @@ static gboolean create_hwnds(FloatBorderChild*fbc,gpointer d)
 
 static gboolean destroy_hwnds(FloatBorderChild*fbc,gpointer d){
 
- 
-    FloatBorder*fb=FLOAT_BORDER(d);
+    g_print("Desstroy HWNDS...%x\n\n",fbc);
+    FloatBorder*fb=fbc->floatborder;//FLOAT_BORDER(d);
     FloatBorderPriv*priv=fb->priv;
+ 
     GtkWidget*widget=GTK_WIDGET(fb);
 
    
@@ -1534,6 +1538,7 @@ static gboolean unmap_hwnds(FloatBorderChild*fbc,gpointer d){
     FloatBorder*fb=fbc->floatborder;//FLOAT_BORDER(d);
     FloatBorderPriv*priv=fb->priv;
 
+    g_print("unmapping hwnds..\n");
 
     if(!priv->frozen){
 
@@ -1635,15 +1640,27 @@ static void float_border_realize(GtkWidget*widget)
 
 
 
+
+static gboolean remove_child(FloatBorderChild*fbchild,gpointer d)
+{
+
+    FloatBorder*fb=fbchild->floatborder;
+
+    float_border_remove(fb,fbchild->widget);
+
+    return FALSE;
+}
+
+
+
 static void float_border_unrealize(GtkWidget*widget)
 {
 
     FloatBorder*fb=FLOAT_BORDER(widget);
 
-    for_all_children(fb,destroy_hwnds,fb);
+    for_all_children(fb,remove_child,fb);
 
     GTK_WIDGET_CLASS(float_border_parent_class)->unrealize(widget);
-
 
 }
 
@@ -1664,7 +1681,7 @@ static void float_border_map(GtkWidget*widget)
 
 static void float_border_unmap(GtkWidget*widget)
 {
-
+    g_print("floatBorder Unmap()...\n");
 
     FloatBorder*fb=FLOAT_BORDER(widget);
     for_all_children(fb,unmap_hwnds,fb);
@@ -1702,6 +1719,31 @@ static gboolean child_sizeallocate(FloatBorderChild*fbchild,gpointer d)
         child_allocation.x += allocation.x;
         child_allocation.y += allocation.y;
     }
+
+
+    GtkRequisition childmin;
+    gtk_widget_get_preferred_size(fbchild->widget,&childmin,NULL);
+    fbchild->min_siz.width=childmin.width;
+    fbchild->min_siz.height=childmin.height;
+
+//    g_message("fbchild . preferred{%d,%d}\n",childmin.width,childmin.height);
+/*
+    if(childmin.width>fbchild->position[REF_CORNER].x)
+        fbchild->position[REF_CORNER].x=childmin.width;
+
+    if(childmin.height>fbchild->position[REF_CORNER].y)
+        fbchild->position[REF_CORNER].y=childmin.height;
+
+*/
+
+        fbchild->position[REF_CORNER].x = CLAMP(fbchild->position[REF_CORNER].x,
+                fbchild->min_siz.width,
+                allocation.width-HWND_THICKNESS-fbchild->x);
+
+        fbchild->position[REF_CORNER].y = CLAMP(fbchild->position[REF_CORNER].y,
+                fbchild->min_siz.height,
+                allocation.height-HWND_THICKNESS-fbchild->y);
+
 
     child_allocation.width = fbchild->position[REF_CORNER].x;
     child_allocation.height = fbchild->position[REF_CORNER].y;
@@ -1791,6 +1833,8 @@ static gboolean child_sizeallocate(FloatBorderChild*fbchild,gpointer d)
         gdk_window_move_resize(fbchild->hwnds[HWND_MOVE],
                 child_allocation.x-HWND_THICKNESS,
                 child_allocation.y-HWND_THICKNESS,
+//                child_allocation.width,
+//                child_allocation.height
                 HWND_THICKNESS,
                 HWND_THICKNESS
                 );
@@ -1817,6 +1861,7 @@ static gboolean draw_child(FloatBorderChild*fbc,gpointer d)
 //    gtk_style_context_add_class(sc,GTK_STYLE_CLASS_OSD);
 //    cairo_save(cr);
 //    gtk_cairo_transform_to_window(cr,widget,fbc->hwnds[HWND_MOVE]);
+    if(fb->priv->show_border){
     gtk_render_focus(sc,cr,
   //          HWND_THICKNESS-2,
 //            HWND_THICKNESS-2,
@@ -1835,6 +1880,8 @@ static gboolean draw_child(FloatBorderChild*fbc,gpointer d)
             fbc->position[REF_CORNER].y + HWND_THICKNESS);
 
     cairo_stroke(cr);
+    }
+
 
     return FALSE;
 
@@ -2039,6 +2086,7 @@ static void fini_fbchild(FloatBorderChild*child)
 
 static void _float_border_put(FloatBorder*fb,GtkWidget*widget,int x,int y,int w,int h,int act,int shr)
 {
+//    g_message("f_put(fb:%x,w:%x)...",fb,widget);
 
     FloatBorderPriv*priv=fb->priv;
     FloatBorderChild*new_child;
@@ -2048,13 +2096,19 @@ static void _float_border_put(FloatBorder*fb,GtkWidget*widget,int x,int y,int w,
     g_return_if_fail(GTK_IS_WIDGET(widget));
  
     new_child=init_fbchild(widget,x,y,w,h,act,shr,
-            HWND_RIGHT,HWND_BOTTOM,HWND_LEFT,HWND_TOP,
-            HWND_BR_RESIZE,HWND_TR_RESIZE,HWND_BL_RESIZE,HWND_MOVE,NULL);
+            HWND_RIGHT,HWND_BOTTOM,
+            HWND_BR_RESIZE,HWND_MOVE,NULL);
     mask_props(fb,new_child);
 
     gtk_widget_set_parent(widget,GTK_WIDGET(fb));
     priv->children=g_list_append(priv->children,new_child);
 
+    gtk_widget_child_focus(GTK_WIDGET(widget),GTK_DIR_TAB_FORWARD);
+
+    dispose_hwnds(new_child);
+//    create_hwnds(new_child,NULL);
+//    map_hwnds(new_child,NULL);
+    gtk_widget_queue_resize(GTK_WIDGET(fb));
 
 }
 
@@ -2071,7 +2125,7 @@ void float_border_put(FloatBorder*fb, GtkWidget*w, int x,int y)
 
 void float_border_put_with_size(FloatBorder*fb, GtkWidget*widget, int x,int y,int w,int h)
 {
-    _float_border_put(fb,widget,x,y,w,h,TRUE,TRUE);
+    _float_border_put(fb,widget,x,y,w,h,TRUE,FALSE);
 
 }
 
@@ -2079,11 +2133,16 @@ void float_border_put_with_size(FloatBorder*fb, GtkWidget*widget, int x,int y,in
 
 static void remove_cache(FloatBorderChild*fbchild)
 {
-    FloatBorderPriv*priv=fbchild->floatborder->priv;
+    FloatBorder* fb=fbchild->floatborder;
+    g_print("fb.:%x...\n",fb);
+    FloatBorderPriv*priv=fb->priv;
+    g_print("fb:%x.....fb->priv:%x...window2child:%x...\n",fb,priv,priv->window2child);
+
     int i;
     for(i=0;i<N_HWNDS;i++){
-        if(fbchild->hwnded[i])
-            g_hash_table_remove(priv->window2child,fbchild->hwnds[i]);
+        if(fbchild->hwnded[i]&& fbchild->hwnds[i])
+            ;
+//            g_hash_table_remove(priv->window2child,fbchild->hwnds[i]);
     }
 
 }
@@ -2091,6 +2150,8 @@ static void remove_cache(FloatBorderChild*fbchild)
 
 void float_border_remove(FloatBorder*fb,GtkWidget*w)
 {
+
+    g_message("f_remove(fb:%x,w:%x)...",fb,w);
 
     g_return_if_fail(IS_FLOAT_BORDER(fb));
     g_return_if_fail(GTK_WIDGET(fb) == gtk_widget_get_parent(w));
@@ -2104,10 +2165,13 @@ void float_border_remove(FloatBorder*fb,GtkWidget*w)
         gboolean was_visible=gtk_widget_get_visible(w);
     
         gtk_widget_unparent(w);
-        priv->children=g_list_remove(priv->children,fbchild);
 
+        priv->children=g_list_remove(priv->children,fbchild);
+        unmap_hwnds(fbchild,NULL);
+        destroy_hwnds(fbchild,NULL);
         remove_cache(fbchild);
         fini_fbchild(fbchild);
+
 
         if(was_visible && gtk_widget_get_visible(GTK_WIDGET(fb)))
             gtk_widget_queue_resize(GTK_WIDGET(fb));
@@ -2577,6 +2641,15 @@ void float_border_set_active(FloatBorder*fb,GtkWidget*w,gboolean set)
 
 
 
+void float_border_show_border(FloatBorder*fb,gboolean show)
+{
+
+    FloatBorderPriv* priv=fb->priv;
+    priv->show_border=show;
+
+
+    gtk_widget_queue_resize(GTK_WIDGET(fb));
+}
 
 
 
