@@ -1419,7 +1419,7 @@ static gboolean create_hwnds(FloatBorderChild*fbc,gpointer d)
 
 static gboolean destroy_hwnds(FloatBorderChild*fbc,gpointer d){
 
-    g_print("Desstroy HWNDS...%x\n\n",fbc);
+//    g_print("Desstroy HWNDS...%x\n\n",fbc);
     FloatBorder*fb=fbc->floatborder;//FLOAT_BORDER(d);
     FloatBorderPriv*priv=fb->priv;
  
@@ -1538,7 +1538,7 @@ static gboolean unmap_hwnds(FloatBorderChild*fbc,gpointer d){
     FloatBorder*fb=fbc->floatborder;//FLOAT_BORDER(d);
     FloatBorderPriv*priv=fb->priv;
 
-    g_print("unmapping hwnds..\n");
+//    g_print("unmapping hwnds..\n");
 
     if(!priv->frozen){
 
@@ -1681,7 +1681,7 @@ static void float_border_map(GtkWidget*widget)
 
 static void float_border_unmap(GtkWidget*widget)
 {
-    g_print("floatBorder Unmap()...\n");
+//    g_print("floatBorder Unmap()...\n");
 
     FloatBorder*fb=FLOAT_BORDER(widget);
     for_all_children(fb,unmap_hwnds,fb);
@@ -2134,9 +2134,9 @@ void float_border_put_with_size(FloatBorder*fb, GtkWidget*widget, int x,int y,in
 static void remove_cache(FloatBorderChild*fbchild)
 {
     FloatBorder* fb=fbchild->floatborder;
-    g_print("fb.:%x...\n",fb);
+//    g_print("fb.:%x...\n",fb);
     FloatBorderPriv*priv=fb->priv;
-    g_print("fb:%x.....fb->priv:%x...window2child:%x...\n",fb,priv,priv->window2child);
+//    g_print("fb:%x.....fb->priv:%x...window2child:%x...\n",fb,priv,priv->window2child);
 
     int i;
     for(i=0;i<N_HWNDS;i++){
@@ -2151,7 +2151,7 @@ static void remove_cache(FloatBorderChild*fbchild)
 void float_border_remove(FloatBorder*fb,GtkWidget*w)
 {
 
-    g_message("f_remove(fb:%x,w:%x)...",fb,w);
+//    g_message("f_remove(fb:%x,w:%x)...",fb,w);
 
     g_return_if_fail(IS_FLOAT_BORDER(fb));
     g_return_if_fail(GTK_WIDGET(fb) == gtk_widget_get_parent(w));
@@ -2581,7 +2581,7 @@ void float_border_reorder(FloatBorder*fb, GtkWidget*w, GtkWidget*sibling, gboole
 
     priv->children=g_list_remove(priv->children,fbchild);
     int pos=g_list_index(priv->children,sibchild);
-    g_print("Pos   ::%d\n",pos);
+//    g_print("Pos   ::%d\n",pos);
 
 
     if(above)
