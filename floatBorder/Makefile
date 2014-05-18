@@ -1,10 +1,8 @@
-
-CC=clang -g
+CC=gcc -g
 CFLAGS=`pkg-config --cflags gtk+-3.0`
 LIBS=`pkg-config --libs gtk+-3.0`
 
 
-.PHONY:clean
 
 test-floatBorder:test-floatBorder.c floatBorder.o
 	${CC} ${CFLAGS} $^ ${LIBS} -o $@
@@ -12,8 +10,9 @@ test-floatBorder:test-floatBorder.c floatBorder.o
 floatBorder.o:floatBorder.c floatBorder.h
 	${CC} ${CFLAGS} -c $< -o $@
 
+.PHONY:clean
 
-chean:
+clean:
 	-rm *.o
 	-rm test-floatBorder
 
