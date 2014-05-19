@@ -54,9 +54,16 @@ void slide_bar_set_under(SlideBar*bar,GtkWidget*w);
 void slide_bar_set_over(SlideBar*bar,GtkWidget*w);
 
 gboolean slide_bar_set_offset(SlideBar*bar,double offset);
+
+double slide_bar_get_goal(SlideBar*bar);
 void slide_bar_set_goal(SlideBar*bar,double goal);
+
+int slide_bar_get_min(SlideBar*bar);
 void slide_bar_set_min(SlideBar*bar,int offset);
 
+double slide_bar_get_speed(SlideBar*bar);
+void slide_bar_set_speed(SlideBar*bar,double s);
 
+GtkWidget* slide_bar_new();
 
 #endif

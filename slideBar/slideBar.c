@@ -571,10 +571,15 @@ void slide_bar_set_over(SlideBar*bar,GtkWidget*w)
 }
 
 
+double slide_bar_get_step(SlideBar*bar)
+{
+    return 1.0/bar->priv->stepval;
+
+}
+
 void slide_bar_set_step(SlideBar*bar,int nsteps)
 {
-    
-
+    bar->priv->stepval=1./nsteps;   
 
 }
 
@@ -600,15 +605,57 @@ gboolean slide_bar_set_offset(SlideBar*bar,double offset)
 
 }
 
+
+
+double slide_bar_get_goal(SlideBar*bar)
+{
+    g_assert(IS_SLIDE_BAR(bar));
+    return bar->priv->goal;
+}
+
+
 void slide_bar_set_goal(SlideBar*bar,double goal)
 {
+    g_assert(IS_SLIDE_BAR(bar));
     bar->priv->goal=CLAMP(goal,0,1);
 
 }
 
 
+int slide_bar_get_min(SlideBar*bar)
+{
+    g_assert(IS_SLIDE_BAR(bar));
+    return bar->priv->min;
+}
+
 void slide_bar_set_min(SlideBar*bar,int offset)
 {
+    g_assert(IS_SLIDE_BAR(bar));
     bar->priv->min=offset;
+    gtk_widget_queue_resize(GTK_WIDGET(bar));
 
 }
+
+
+double slide_bar_get_speed(SlideBar*bar)
+{
+    g_assert(IS_SLIDE_BAR(bar));
+    return 10./(bar->priv->interval);
+
+}
+
+void slide_bar_set_speed(SlideBar*bar,double s)
+{
+    g_assert(IS_SLIDE_BAR(bar));
+    s=CLAMP(s,0.1,1.0);
+
+    bar->priv->interval=10./s;
+
+}
+
+GtkWidget* slide_bar_new()
+{
+return (GtkWidget*)g_object_new(TYPE_SLIDE_BAR,NULL);
+}
+
+
