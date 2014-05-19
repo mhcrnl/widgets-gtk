@@ -31,7 +31,13 @@ int main(int argc,char**argv)
     GtkWidget*sb=g_object_new(TYPE_SLIDE_BAR,NULL);
     
 
+    GtkWidget*image=gtk_image_new_from_icon_name("go-down",GTK_ICON_SIZE_BUTTON);
     GtkWidget*button=gtk_button_new_with_label("BuTToN");
+
+    GtkWidget*obox=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,2);
+
+    gtk_box_pack_start(GTK_BOX(obox),image,TRUE,TRUE,0);
+    gtk_box_pack_start(GTK_BOX(obox),button,FALSE,FALSE,0);
 
     GtkWidget*label=gtk_label_new("Move Your Pointer to Top Center\n<a button hidden there>");
     gtk_label_set_justify(GTK_LABEL(label),GTK_JUSTIFY_CENTER);
@@ -49,7 +55,7 @@ int main(int argc,char**argv)
 //    gtk_container_add(GTK_CONTAINER(box),scale);
     gtk_container_add(GTK_CONTAINER(win),box);
 
-    slide_bar_set_over(SLIDE_BAR(sb),button);
+    slide_bar_set_over(SLIDE_BAR(sb),obox);
     slide_bar_set_under(SLIDE_BAR(sb),label);
 
 
