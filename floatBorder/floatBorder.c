@@ -305,7 +305,7 @@ g_type_class_add_private(klass,sizeof(FloatBorderPriv));
 
 static void float_border_init(FloatBorder* fb)
 {
-FloatBorderPriv* priv=FLOAT_BODER_GET_PRIV(fb);
+FloatBorderPriv* priv=FLOAT_BORDER_GET_PRIV(fb);
 fb->priv=priv;
 
 GtkWidget*widget=GTK_WIDGET(fb);
