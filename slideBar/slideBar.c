@@ -385,7 +385,7 @@ static gboolean slide_bar_enter(GtkWidget*widget,GdkEventCrossing*e)
 
     if(priv->timeoutid!=0)
         g_source_remove(priv->timeoutid);
-    g_print("offset:%g, goal:%g\n",priv->offset,priv->goal);
+//    g_print("offset:%g, goal:%g\n",priv->offset,priv->goal);
    
     if(priv->offset<priv->goal){
         priv->timeoutid=g_timeout_add(priv->interval,(GSourceFunc)auto_offset,SLIDE_BAR(widget));
@@ -413,7 +413,7 @@ static gboolean slide_bar_leave(GtkWidget*widget,GdkEventCrossing*e)
 
     if(priv->timeoutid!=0)
         g_source_remove(priv->timeoutid);
-    g_print("offset:%g, goal:%g\n",priv->offset,priv->goal);
+//    g_print("offset:%g, goal:%g\n",priv->offset,priv->goal);
    
     if(priv->offset>0){
         priv->timeoutid=g_timeout_add(priv->interval,(GSourceFunc)auto_offset,SLIDE_BAR(widget));
